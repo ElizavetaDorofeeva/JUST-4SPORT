@@ -6,7 +6,6 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 
-// ... (ProtectedRoute тот же) ...
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -14,7 +13,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-// Страницы-заглушки
 const HomePage = () => <div className="p-6"><h2 className="text-2xl font-bold">Главная страница</h2></div>;
 const CreatePage = () => <div className="p-6"><h2 className="text-2xl font-bold">Создать событие</h2></div>;
 const ProfilePage = () => <div className="p-6"><h2 className="text-2xl font-bold">Профиль</h2></div>;
@@ -22,10 +20,8 @@ const ProfilePage = () => <div className="p-6"><h2 className="text-2xl font-bold
 const AppContent: React.FC = () => {
   return (
     <>
-      {/* Хедер теперь фиксированный */}
       <Header />
       
-      {/* pt-16 (padding-top: 4rem) нужен, чтобы контент не прятался под хедером */}
       <main className="pt-16 min-h-screen bg-gray-50">
         <Routes>
           <Route path="/" element={<HomePage />} />
