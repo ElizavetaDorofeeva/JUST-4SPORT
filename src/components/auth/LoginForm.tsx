@@ -38,7 +38,7 @@ export const LoginForm: React.FC = () => {
     setIsLoading(true);
     try {
       await authLogin({ email, password });
-      navigate('/dashboard');
+      navigate('/profile');
     } catch (error) {
       setErrors({ email: 'Неверный email или пароль' });
     } finally {

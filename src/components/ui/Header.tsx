@@ -84,7 +84,7 @@ export const Header: React.FC = () => {
       <ConfirmModal
         isOpen={showLogoutConfirm}
         title="Выход из аккаунта"
-        message="Вы уверены, что хотите выйти из системы?"
+        message="Вы уверены, что хотите выйти?"
         confirmText="Выйти"
         cancelText="Отмена"
         onConfirm={confirmLogout}

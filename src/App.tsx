@@ -5,6 +5,7 @@ import { Header } from './components/ui/Header';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
+import { Profile } from './pages/Profile';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -13,9 +14,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-const HomePage = () => <div className="p-6"><h2 className="text-2xl font-bold">Главная страница</h2></div>;
-const CreatePage = () => <div className="p-6"><h2 className="text-2xl font-bold">Создать событие</h2></div>;
-const ProfilePage = () => <div className="p-6"><h2 className="text-2xl font-bold">Профиль</h2></div>;
+const HomePage = () => <div className="p-6"><h2 className="text-2xl font-bold"></h2></div>;
+const CreatePage = () => <div className="p-6"><h2 className="text-2xl font-bold"></h2></div>;
 
 const AppContent: React.FC = () => {
   return (
@@ -29,7 +29,7 @@ const AppContent: React.FC = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/create" element={<ProtectedRoute><CreatePage /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         </Routes>
       </main>
     </>
