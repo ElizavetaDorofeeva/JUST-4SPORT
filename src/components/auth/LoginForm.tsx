@@ -48,7 +48,7 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white p-6 flex flex-col">
-      <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col justify-start pt-20 max-w-md mx-auto w-full overflow-auto">
         <h1 className="text-4xl font-bold text-[#8B1E1E] mb-8 text-center">Вход</h1>
         
         <form onSubmit={handleSubmit} className="space-y-4">

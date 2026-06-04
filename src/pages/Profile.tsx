@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/user';
 import { EventCard } from '../components/ui/EventCard';
 import { Event, Sport, UserProfile } from '../types/profile';
+import { EditProfileModal } from '../components/ui/EditProfileModal';
 
 type TabType = 'participant' | 'author' | 'past';
 
@@ -11,6 +12,8 @@ export const Profile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('participant');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -33,23 +36,13 @@ export const Profile: React.FC = () => {
     loadProfile();
   }, [user?.id]);
 
-  const getSkillLevelLabel = (level: string) => {
-    const labels: { [key: string]: string } = {
-      START: 'Новичок',
-      MEDIUM: 'Средний',
-      HARD: 'Продвинутый'
-    };
-    return labels[level] || level;
-  };
-
   const getSportLabel = (sport: string) => {
     const labels: { [key: string]: string } = {
-      VOLLEYBALL: 'Волейбол',
-      BASKETBALL: 'Баскетбол',
-      FOOTBALL: 'Футбол',
-      TENNIS: 'Теннис',
-      HOCKEY: 'Хоккей',
-      ULTIMATE: 'Альтимат'
+      VOLLEYBALL: 'волейбол',
+      BASKETBALL: 'баскетбол',
+      SOCCER: 'футбол',
+      HOCKEY: 'хоккей',
+      ULTIMATE: 'алтимат'
     };
     return labels[sport] || sport;
   };
@@ -90,13 +83,28 @@ export const Profile: React.FC = () => {
 
   const currentEvents = getCurrentEvents();
 
+  useEffect(() => {
+    document.body.classList.add('no-scroll');
+  
+    return () => {
+      document.body.classList.remove('no-scroll');
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+    <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
+      <div className="max-w-4xl mx-auto w-full px-4 py-6 flex-1 overflow-y-auto">
+        
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          
           <div className="flex items-start gap-6 mb-6">
-            <div className="flex-shrink-0">
-              <div className="w-20 h-20 rounded-full border-2 border-gray-300 flex items-center justify-center overflow-hidden bg-gray-100">
+            
+            <div 
+              onClick={handlePhotoClick} 
+              className="flex-shrink-0 cursor-pointer"
+              title="Нажмите, чтобы обновить фото"
+            >
+              <div className="w-24 h-24 rounded-full border-2 border-gray-200 flex items-center justify-center overflow-hidden bg-gray-100">
                 {profile?.photo?.path ? (
                   <img 
                     src={profile.photo.path} 
@@ -104,7 +112,7 @@ export const Profile: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-gray-500 text-sm">фото</span>
+                  <span className="text-gray-400 text-xs text-center">Загрузить<br/>фото</span>
                 )}
               </div>
             </div>
@@ -113,85 +121,65 @@ export const Profile: React.FC = () => {
               <h1 className="text-2xl font-bold text-gray-900 mb-1">
                 {profile?.name || user?.name || 'Пользователь'}
               </h1>
-              <p className="text-gray-500 mb-2">@{profile?.nickname || 'user'}</p>
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+              <p className="text-gray-500 mb-4">@{profile?.nickname || 'user'}</p>
+              
+              <button 
+                onClick={() => setShowEditModal(true)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium border border-gray-200"
+              >
                 Редактировать профиль
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="mb-6">
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h3 className="text-sm font-semibold text-[#8B1E1E] uppercase mb-2">
+              <h3 className="text-sm font-semibold text-[#8B1E1E] uppercase mb-3">
                 Любимый спорт
               </h3>
-              <p className="text-gray-900 font-medium">
-                {profile?.favoriteSports && profile.favoriteSports.length > 0
-                  ? profile.favoriteSports.map(sport => getSportLabel(sport)).join(', ')
-                  : 'Не указано'}
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h3 className="text-sm font-semibold text-[#8B1E1E] uppercase mb-2">
-                Уровень
-              </h3>
-              <p className="text-gray-900 font-medium">
-                {getSkillLevelLabel('START')}
-              </p>
+              <div className="flex flex-wrap gap-2">
+                {profile?.favoriteSports && profile.favoriteSports.length > 0 ? (
+                  profile.favoriteSports.map((sport, index) => (
+                    <span 
+                      key={index} 
+                      className="px-3 py-1 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 font-medium"
+                    >
+                      {getSportLabel(sport)}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 text-sm">Не указано</span>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="border-b border-gray-300 mb-6">
+          <div className="border-b border-gray-300 mb-4">
             <div className="flex gap-6">
-              <button
-                onClick={() => setActiveTab('participant')}
-                className={`pb-3 font-medium transition-colors relative ${
-                  activeTab === 'participant'
-                    ? 'text-[#8B1E1E]'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Участвую
-                {activeTab === 'participant' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8B1E1E]" />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('author')}
-                className={`pb-3 font-medium transition-colors relative ${
-                  activeTab === 'author'
-                    ? 'text-[#8B1E1E]'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Организую
-                {activeTab === 'author' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8B1E1E]" />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('past')}
-                className={`pb-3 font-medium transition-colors relative ${
-                  activeTab === 'past'
-                    ? 'text-[#8B1E1E]'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Прошедшие
-                {activeTab === 'past' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8B1E1E]" />
-                )}
-              </button>
+              {(['participant', 'author', 'past'] as TabType[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-3 font-medium transition-colors relative ${
+                    activeTab === tab ? 'text-[#8B1E1E]' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {tab === 'participant' ? 'Участвую' : tab === 'author' ? 'Организую' : 'Прошедшие'}
+                  {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8B1E1E]" />}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 min-h-[200px]">
             {currentEvents.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                {activeTab === 'participant' && 'Вы пока не участвуете в событиях'}
-                {activeTab === 'author' && 'Вы пока не организовали события'}
-                {activeTab === 'past' && 'У вас нет прошедших событий'}
-              </p>
+              <div className="flex flex-col items-center justify-center h-40 text-gray-500">
+                <p>
+                  {activeTab === 'participant' && 'Вы пока не участвуете в событиях'}
+                  {activeTab === 'author' && 'Вы пока не организовали события'}
+                  {activeTab === 'past' && 'У вас нет прошедших событий'}
+                </p>
+              </div>
             ) : (
               currentEvents.map(event => (
                 <EventCard

@@ -12,6 +12,18 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
+const getUserIdFromToken = (token: string): string | null => {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = atob(payload);
+    const data = JSON.parse(decoded);
+
+    return data.userId ?? null;
+  } catch {
+    return null;
+  }
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -21,6 +33,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const token = tokenStorage.getAccessToken();
     if (token) {
+      const userId = getUserIdFromToken(token);
+      setUser({
+        id: userId || '',
+        email: 'user@example.com',
+        name: 'User',
+        nickname: 'user'
+      });
     }
     setIsLoading(false);
   }, []);
@@ -32,7 +51,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       refreshToken: data.refreshToken
     });
     
+    const userId = getUserIdFromToken(data.accessToken);
+    
     setUser({
+      id: userId || '',
       email: credentials.email,
       name: credentials.email.split('@')[0],
       nickname: credentials.email.split('@')[0]
@@ -45,11 +67,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       accessToken: data.accessToken,
       refreshToken: data.refreshToken
     });
+
+    const userId = getUserIdFromToken(data.accessToken);
+
     setUser({
+      id: userId || '',
       name: credentials.name,
       nickname: credentials.nickname,
-      email: credentials.email,
-      favoriteSports: credentials.favoriteSports
+      email: credentials.email
     });
   };
 
