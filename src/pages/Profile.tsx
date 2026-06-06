@@ -4,6 +4,7 @@ import { userApi } from '../api/user';
 import { EventCard } from '../components/ui/EventCard';
 import { Event, Sport, UserProfile } from '../types/profile';
 import { EditProfileModal } from '../components/ui/EditProfileModal';
+import { PhotoManagementModal } from '../components/ui/PhotoManagementModal';
 
 type TabType = 'participant' | 'author' | 'past';
 
@@ -14,6 +15,7 @@ export const Profile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -48,16 +50,62 @@ export const Profile: React.FC = () => {
   };
 
   const handleCancelEvent = async (eventId: string) => {
-    console.log('Cancel event:', eventId);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B1E1E]"></div>
-      </div>
-    );
-  }
+  const handlePhotoClick = () => {
+    setShowPhotoModal(true);
+  };
+
+  const handleUploadPhoto = async (url: string) => {
+    if (!user?.id || !url.trim()) return;
+    
+    const title = 'Фото профиля';
+
+    try {
+      await userApi.updatePhoto(user.id, { path: url, title });
+      const data = await userApi.getProfile(user.id);
+      setProfile(data);
+      setShowPhotoModal(false);
+    } catch (error) {
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!user?.id) return;
+
+    try {
+      await userApi.deletePhoto(user.id);
+      const data = await userApi.getProfile(user.id);
+      setProfile(data);
+      setShowPhotoModal(false);
+    } catch (error) {
+    }
+  };
+
+  const handleSaveProfile = async (data: { 
+    name?: string; nickname?: string; email?: string; favoriteSports?: string[] 
+  }) => {
+    const userId = user?.id;
+    if (!userId) return;
+
+    setSavingProfile(true);
+    try {
+      const fullData = {
+        name: data.name || profile?.name || '',
+        nickname: data.nickname || profile?.nickname || '',
+        email: data.email || profile?.email || '',
+        favoriteSports: data.favoriteSports || profile?.favoriteSports || []
+      };
+      
+      await userApi.updateProfile(userId, fullData);
+      const updated = await userApi.getProfile(userId);
+      setProfile(updated);
+      setShowEditModal(false);
+    } catch (err: any) {
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const getCurrentEvents = () => {
     if (!profile) return [];
@@ -193,6 +241,22 @@ export const Profile: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <EditProfileModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        profile={profile}
+        onSave={handleSaveProfile}
+        loading={savingProfile}
+      />
+      <PhotoManagementModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        hasPhoto={!!profile?.photo?.path}
+        currentPhotoUrl={profile?.photo?.path || ''}
+        onUpload={handleUploadPhoto}
+        onDelete={handleDeletePhoto}
+      />
     </div>
   );
 };
