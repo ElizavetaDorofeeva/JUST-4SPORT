@@ -5,8 +5,9 @@ import { EventCard } from '../components/ui/EventCard';
 import { Event, Sport, UserProfile } from '../types/profile';
 import { EditProfileModal } from '../components/ui/EditProfileModal';
 import { PhotoManagementModal } from '../components/ui/PhotoManagementModal';
+import { tokenStorage } from '../utils/tokenStorage';
 
-type TabType = 'participant' | 'author' | 'past';
+type TabType = 'participant' | 'author';
 
 export const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -16,6 +17,42 @@ export const Profile: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPhoto = async () => {
+      if (photoUrl) {
+        URL.revokeObjectURL(photoUrl);
+        setPhotoUrl(null);
+      }
+
+      if (!profile?.photo?.path) return;
+
+      try {
+        const token = tokenStorage.getAccessToken();
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/photo/${profile.photo.path}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setPhotoUrl(url);
+        } else {
+          console.error('❌ Ошибка загрузки фото:', response.status);
+        }
+      } catch (error) {
+        console.error('❌ Не удалось загрузить фото:', error);
+      }
+    };
+
+    loadPhoto();
+  }, [profile?.photo?.path]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -26,7 +63,7 @@ export const Profile: React.FC = () => {
 
       setLoading(true);
       try {
-        const data = await userApi.getProfile(user.id);
+        const data = await userApi.getProfile();
         setProfile(data);
       } catch (error) {
         console.error('Failed to load profile:', error);
@@ -56,17 +93,17 @@ export const Profile: React.FC = () => {
     setShowPhotoModal(true);
   };
 
-  const handleUploadPhoto = async (url: string) => {
-    if (!user?.id || !url.trim()) return;
-    
-    const title = 'Фото профиля';
+  const handleUploadPhoto = async (file: File) => {
+    if (!user?.id) return;
 
     try {
-      await userApi.updatePhoto(user.id, { path: url, title });
-      const data = await userApi.getProfile(user.id);
+      await userApi.updatePhoto(file);
+      const data = await userApi.getProfile();
       setProfile(data);
       setShowPhotoModal(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Ошибка загрузки фото:', error);
+      alert('❌ Ошибка при загрузке фото');
     }
   };
 
@@ -74,8 +111,8 @@ export const Profile: React.FC = () => {
     if (!user?.id) return;
 
     try {
-      await userApi.deletePhoto(user.id);
-      const data = await userApi.getProfile(user.id);
+      await userApi.deletePhoto();
+      const data = await userApi.getProfile();
       setProfile(data);
       setShowPhotoModal(false);
     } catch (error) {
@@ -98,7 +135,7 @@ export const Profile: React.FC = () => {
       };
       
       await userApi.updateProfile(userId, fullData);
-      const updated = await userApi.getProfile(userId);
+      const updated = await userApi.getProfile();
       setProfile(updated);
       setShowEditModal(false);
     } catch (err: any) {
@@ -119,11 +156,6 @@ export const Profile: React.FC = () => {
         return profile.authorEvents.filter(
           e => e.eventStatus !== 'FINISHED'
         );
-      case 'past':
-        return [
-          ...profile.participantEvents,
-          ...profile.authorEvents
-        ].filter(e => e.eventStatus === 'FINISHED');
       default:
         return [];
     }
@@ -153,10 +185,10 @@ export const Profile: React.FC = () => {
               title="Нажмите, чтобы обновить фото"
             >
               <div className="w-24 h-24 rounded-full border-2 border-gray-200 flex items-center justify-center overflow-hidden bg-gray-100">
-                {profile?.photo?.path ? (
+                {photoUrl ? (
                   <img 
-                    src={profile.photo.path} 
-                    alt={profile.name}
+                    src={photoUrl}
+                    alt={profile?.name || 'Фото'}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -204,7 +236,7 @@ export const Profile: React.FC = () => {
 
           <div className="border-b border-gray-300 mb-4">
             <div className="flex gap-6">
-              {(['participant', 'author', 'past'] as TabType[]).map((tab) => (
+              {(['participant', 'author'] as TabType[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -212,7 +244,7 @@ export const Profile: React.FC = () => {
                     activeTab === tab ? 'text-[#8B1E1E]' : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  {tab === 'participant' ? 'Участвую' : tab === 'author' ? 'Организую' : 'Прошедшие'}
+                  {tab === 'participant' ? 'Участвую' : 'Организую'}
                   {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8B1E1E]" />}
                 </button>
               ))}
@@ -225,7 +257,6 @@ export const Profile: React.FC = () => {
                 <p>
                   {activeTab === 'participant' && 'Вы пока не участвуете в событиях'}
                   {activeTab === 'author' && 'Вы пока не организовали события'}
-                  {activeTab === 'past' && 'У вас нет прошедших событий'}
                 </p>
               </div>
             ) : (
@@ -233,7 +264,7 @@ export const Profile: React.FC = () => {
                 <EventCard
                   key={event.id}
                   event={event}
-                  showCancelButton={activeTab !== 'past'}
+                  showCancelButton={true}
                   onCancel={() => handleCancelEvent(event.id)}
                 />
               ))
@@ -253,7 +284,6 @@ export const Profile: React.FC = () => {
         isOpen={showPhotoModal}
         onClose={() => setShowPhotoModal(false)}
         hasPhoto={!!profile?.photo?.path}
-        currentPhotoUrl={profile?.photo?.path || ''}
         onUpload={handleUploadPhoto}
         onDelete={handleDeletePhoto}
       />

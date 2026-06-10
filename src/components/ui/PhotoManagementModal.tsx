@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface PhotoManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   hasPhoto: boolean;
-  currentPhotoUrl?: string;
-  onUpload: (url: string) => void;
+  onUpload: (file: File) => void;
   onDelete: () => void;
 }
 
@@ -13,23 +12,26 @@ export const PhotoManagementModal: React.FC<PhotoManagementModalProps> = ({
   isOpen,
   onClose,
   hasPhoto,
-  currentPhotoUrl,
   onUpload,
   onDelete
 }) => {
-  const [url, setUrl] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setUrl(currentPhotoUrl || '');
-    }
-  }, [isOpen, currentPhotoUrl]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSave = () => {
-    if (url.trim()) {
-      onUpload(url.trim());
+    if (selectedFile) {
+      onUpload(selectedFile);
     }
   };
 
@@ -47,46 +49,62 @@ export const PhotoManagementModal: React.FC<PhotoManagementModalProps> = ({
         </h3>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ссылка на фото (URL)
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com/photo.jpg"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1E1E] focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!url.trim()}
-                className="px-4 py-2 bg-[#8B1E1E] text-white rounded-lg hover:bg-[#6B1616] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {hasPhoto ? 'Изменить' : 'Загрузить'}
-              </button>
-            </div>
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-[#8B1E1E] transition-colors"
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+            
+            {preview ? (
+              <img src={preview} alt="Preview" className="max-h-32 object-cover rounded-lg" />
+            ) : (
+              <>
+                <span className="text-3xl text-gray-400 mb-2">📷</span>
+                <span className="text-sm text-gray-600">Нажмите, чтобы выбрать фото</span>
+              </>
+            )}
           </div>
 
-          {hasPhoto && (
-            <div className="flex gap-3 pt-2">
+          {selectedFile && (
+            <p className="text-sm text-gray-600 text-center">
+              Выбрано: {selectedFile.name}
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!selectedFile}
+              className="flex-1 px-4 py-2 bg-[#8B1E1E] text-white rounded-lg hover:bg-[#6B1616] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {hasPhoto ? 'Изменить' : 'Загрузить'}
+            </button>
+            
+            {hasPhoto && (
               <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Отмена
-              </button>
-              
-              <button
+                type="button"
                 onClick={handleDeleteClick}
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
                 Удалить
               </button>
-            </div>
-          )}
+            )}
+            
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Отмена
+            </button>
+          </div>
         </div>
       </div>
     </div>

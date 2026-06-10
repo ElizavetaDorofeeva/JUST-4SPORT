@@ -4,10 +4,7 @@ import { tokenStorage } from '../utils/tokenStorage';
 const API_URL = import.meta.env.VITE_API_URL; 
 
 export const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: API_URL
 });
 
 api.interceptors.request.use(
@@ -15,6 +12,9 @@ api.interceptors.request.use(
     const token = tokenStorage.getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },

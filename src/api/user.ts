@@ -8,14 +8,9 @@ export interface UpdateProfileDto {
   favoriteSports?: string[];
 }
 
-export interface PhotoDto {
-  title: string;
-  path: string;
-}
-
 export const userApi = {
-  getProfile: async (userId: string): Promise<UserProfile> => {
-    const response = await api.get(`/profile/${userId}`);
+  getProfile: async (): Promise<UserProfile> => {
+    const response = await api.get('/profile');
     return response.data;
   },
 
@@ -28,11 +23,14 @@ export const userApi = {
     await api.delete(`/profile/${userId}`);
   },
 
-  updatePhoto: async (userId: string, photoData: PhotoDto): Promise<void> => {
-    await api.put(`/profile/${userId}/photo`, photoData);
+  updatePhoto: async (file: File): Promise<void> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    await api.put('/profile/photo', formData);
   },
 
-  deletePhoto: async (userId: string): Promise<void> => {
-    await api.delete(`/profile/${userId}/photo`);
+  deletePhoto: async (): Promise<void> => {
+    await api.delete('/profile/photo');
   }
 };
