@@ -14,6 +14,51 @@ export interface EventCreateDto {
   deadline: string | null;
 }
 
+export interface EventPhoto {
+  id: string;
+  path: string;
+  title: string;
+}
+
+export interface Event {
+  id: string;
+  name: string;
+  dateStart: string;
+  dateEnd: string;
+  cost: number;
+  sport: string;
+  eventType: string;
+  skillLevel: string;
+  eventStatus: string;
+  photo: EventPhoto | null;
+}
+
+export interface EventsResponse {
+  content: Event[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface EventFilters {
+  status?: string;
+  name?: string;
+  dateStart?: string;
+  dateEnd?: string;
+  costStart?: number;
+  costEnd?: number;
+  sport?: string;
+  eventType?: string;
+  skillLevel?: string;
+  sortField?: string;
+  sortDirection?: string;
+  page?: number;
+  size?: number;
+}
+
 export const eventApi = {
   createEvent: async (eventData: EventCreateDto, imageFile?: File) => {
     const formData = new FormData();
@@ -31,8 +76,21 @@ export const eventApi = {
     return response.data;
   },
 
-  getEvents: async () => {
-    const response = await api.get('/events');
+  getEvents: async (filters?: EventFilters): Promise<EventsResponse> => {
+    const params = new URLSearchParams();
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+
+    const queryString = params.toString();
+    const url = queryString ? `/events?${queryString}` : '/events';
+    
+    const response = await api.get(url);
     return response.data;
   },
 
