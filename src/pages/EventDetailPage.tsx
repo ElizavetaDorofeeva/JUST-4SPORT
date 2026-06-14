@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { eventApi } from '../api/event';
+import { eventApi, EventCreateDto } from '../api/event';
 import { tokenStorage } from '../utils/tokenStorage';
-
+import { useAuth } from '../contexts/AuthContext';
+import { EditEventModal } from '../components/ui/EditEventModal';
 
 interface EventDetail {
   id: string;
@@ -54,9 +55,14 @@ interface EventDetail {
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -112,6 +118,87 @@ export const EventDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateEvent = async (data: EventCreateDto) => {
+  if (!id) return;
+  
+  setIsUpdating(true);
+  try {
+    const formatDateTime = (dateString: string) => {
+      if (!dateString) return null;
+      return dateString.length === 16 ? `${dateString}:00` : dateString;
+    };
+
+    const payload = {
+      name: data.name,
+      description: data.description,
+      place: data.place,
+      cost: Number(data.cost),
+      sport: event!.sport,
+      eventType: event!.eventType,
+      skillLevel: event!.skillLevel,
+      teamsNumber: Number(data.teamsNumber),
+      dateStart: formatDateTime(data.dateStart),
+      dateEnd: formatDateTime(data.dateEnd),
+      deadline: data.deadline ? formatDateTime(data.deadline) : null
+    };
+    
+    await eventApi.updateEvent(id, payload as any);
+    await loadEvent();
+    setShowEditModal(false);
+  } catch (error) {
+    console.error('Failed to update event:', error);
+    alert('❌ Ошибка при обновлении мероприятия');
+  } finally {
+    setIsUpdating(false);
+  }
+};
+
+  const handleDeleteEvent = async () => {
+    if (!id) return;
+    
+    if (!window.confirm('Вы уверены, что хотите удалить это мероприятие?')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await eventApi.deleteEvent(id);
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      alert('❌ Ошибка при удалении мероприятия');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const isAuthor = event && user ? event.author.id === user.id : false;
+
+  const getEventDataForEdit = (): EventCreateDto => {
+    if (!event) return {} as EventCreateDto;
+    
+    const formatForInput = (isoString: string) => {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    return {
+      name: event.name,
+      description: event.description,
+      place: event.place,
+      cost: event.cost,
+      sport: event.sport,
+      eventType: event.eventType,
+      skillLevel: event.skillLevel,
+      teamsNumber: event.teamsNumber,
+      dateStart: formatForInput(event.dateStart),
+      dateEnd: formatForInput(event.dateEnd),
+      deadline: event.deadline ? formatForInput(event.deadline) : null
+    };
   };
 
   const formatDate = (dateString: string) => {
@@ -383,7 +470,27 @@ export const EventDetailPage: React.FC = () => {
               </div>
             )}
 
-            {event.eventStatus === 'WILL_BE' && (
+            {isAuthor && event.eventStatus === 'WILL_BE' && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  disabled={isUpdating}
+                  className="w-full py-3 bg-[#8B1E1E] text-white rounded-xl hover:bg-[#6B1616] transition-colors font-medium text-lg disabled:opacity-50"
+                >
+                  {isUpdating ? 'Сохранение...' : 'Редактировать мероприятие'}
+                </button>
+                
+                <button
+                  onClick={handleDeleteEvent}
+                  disabled={isDeleting}
+                  className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium text-lg disabled:opacity-50"
+                >
+                  {isDeleting ? 'Удаление...' : 'Удалить мероприятие'}
+                </button>
+              </div>
+            )}
+
+            {!isAuthor && event.eventStatus === 'WILL_BE' && (
               <button
                 className="w-full py-3 bg-[#8B1E1E] text-white rounded-xl hover:bg-[#6B1616] transition-colors font-medium text-lg"
               >
@@ -393,6 +500,16 @@ export const EventDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {isAuthor && (
+        <EditEventModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleUpdateEvent}
+          initialData={getEventDataForEdit()}
+          loading={isUpdating}
+        />
+      )}
     </div>
   );
 };

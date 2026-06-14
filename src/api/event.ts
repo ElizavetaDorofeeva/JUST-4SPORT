@@ -107,5 +107,13 @@ export const eventApi = {
   leaveEvent: async (eventId: string) => {
     const response = await api.post(`/events/${eventId}/leave`);
     return response.data;
+  },
+
+  updateEvent: async (eventId: string, eventData: EventCreateDto): Promise<void> => {
+    await api.put(`/author-events/${eventId}`, eventData);
+  },
+
+  deleteEvent: async (eventId: string): Promise<void> => {
+    await api.delete(`/author-events/${eventId}`);
   }
 };
