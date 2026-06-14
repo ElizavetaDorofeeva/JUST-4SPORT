@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { eventApi, Event, EventFilters } from '../api/event';
 import { MainEventCard } from '../components/ui/MainEventCard';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const SPORTS = [
   { value: '', label: 'Все виды' },
@@ -8,7 +10,7 @@ const SPORTS = [
   { value: 'BASKETBALL', label: 'Баскетбол' },
   { value: 'SOCCER', label: 'Футбол' },
   { value: 'HOCKEY', label: 'Хоккей' },
-  { value: 'ULTIMATE', label: 'Альтимат' }
+  { value: 'ULTIMATE', label: 'Алтимат' }
 ];
 
 const SKILL_LEVELS = [
@@ -33,6 +35,8 @@ const SORT_OPTIONS = [
 ];
 
 export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -326,6 +330,27 @@ export const HomePage: React.FC = () => {
           </div>
         )}
       </div>
+      {isAuthenticated && (
+        <button
+          onClick={() => navigate('/create')}
+          className="fixed bottom-8 right-8 w-16 h-16 bg-[#8B1E1E] text-white rounded-full shadow-lg hover:bg-[#6B1616] transition-all flex items-center justify-center hover:active:z-40 group"
+          title="Создать мероприятие"
+        >
+          <svg 
+            className="w-8 h-8 group-hover:transition-transform" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2.5} 
+              d="M12 4v16m8-8H4" 
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };

@@ -8,7 +8,7 @@ const SPORTS = [
   { value: 'BASKETBALL', label: 'Баскетбол' },
   { value: 'SOCCER', label: 'Футбол' },
   { value: 'HOCKEY', label: 'Хоккей' },
-  { value: 'ULTIMATE', label: 'Альтимат' }
+  { value: 'ULTIMATE', label: 'Алтимат' }
 ];
 
 const EVENT_TYPES = [

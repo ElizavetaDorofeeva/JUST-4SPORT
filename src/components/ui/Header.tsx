@@ -47,14 +47,6 @@ export const Header: React.FC = () => {
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/create"
-                  className={`font-medium text-base transition-colors ${
-                    isActive('/create') ? 'text-[#8B1E1E]' : 'text-gray-700 hover:text-[#8B1E1E]'
-                  }`}
-                >
-                  Создать
-                </Link>
-                <Link
                   to="/profile"
                   className={`font-medium text-base transition-colors ${
                     isActive('/profile') ? 'text-[#8B1E1E]' : 'text-gray-700 hover:text-[#8B1E1E]'

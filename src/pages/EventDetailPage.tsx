@@ -218,7 +218,7 @@ export const EventDetailPage: React.FC = () => {
       BASKETBALL: 'Баскетбол',
       SOCCER: 'Футбол',
       HOCKEY: 'Хоккей',
-      ULTIMATE: 'Альтимат'
+      ULTIMATE: 'Алтимат'
     };
     return labels[sport] || sport;
   };
