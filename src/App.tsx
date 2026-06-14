@@ -7,6 +7,8 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Profile } from './pages/Profile';
 import { CreateEvent } from './pages/CreateEvent';
+import { HomePage } from './pages/HomePage'; 
+import { EventDetailPage } from './pages/EventDetailPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -14,9 +16,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
-
-const HomePage = () => <div className="p-6"><h2 className="text-2xl font-bold"></h2></div>;
-const CreatePage = () => <div className="p-6"><h2 className="text-2xl font-bold"></h2></div>;
 
 const AppContent: React.FC = () => {
   return (
@@ -31,6 +30,7 @@ const AppContent: React.FC = () => {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/create" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
         </Routes>
       </main>
     </>
