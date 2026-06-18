@@ -122,7 +122,7 @@ export const MainEventCard: React.FC<MainEventCardProps> = ({ event }) => {
           onClick={() => navigate(`/events/${event.id}`)}
           className="w-full py-2 bg-[#8B1E1E] text-white rounded-xl hover:bg-[#6B1616] transition-colors font-medium"
         >
-          Подать заявку
+          Подробнее
         </button>
       </div>
     </div>

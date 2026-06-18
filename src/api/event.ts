@@ -14,6 +14,13 @@ export interface EventCreateDto {
   deadline: string | null;
 }
 
+export interface ApplicationDto {
+  name: string;
+  captainNickname: string;
+  membersNicknames: string[];
+  contactInformation: string;
+}
+
 export interface EventPhoto {
   id: string;
   path: string;
@@ -31,6 +38,7 @@ export interface Event {
   skillLevel: string;
   eventStatus: string;
   photo: EventPhoto | null;
+  place?: string;
 }
 
 export interface EventsResponse {
@@ -115,5 +123,9 @@ export const eventApi = {
 
   deleteEvent: async (eventId: string): Promise<void> => {
     await api.delete(`/author-events/${eventId}`);
+  },
+
+  submitApplication: async (eventId: string, application: ApplicationDto): Promise<void> => {
+    await api.post(`/event/${eventId}/application`, application);
   }
 };

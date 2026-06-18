@@ -2,15 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/user';
 import { EventCard } from '../components/ui/EventCard';
-import { Event, Sport, UserProfile } from '../types/profile';
+import { UserProfile } from '../types/profile';
 import { EditProfileModal } from '../components/ui/EditProfileModal';
 import { PhotoManagementModal } from '../components/ui/PhotoManagementModal';
 import { tokenStorage } from '../utils/tokenStorage';
+import { useNavigate } from 'react-router-dom';
+import { Event } from '../api/event';
 
 type TabType = 'participant' | 'author';
 
 export const Profile: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('participant');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,6 +174,10 @@ export const Profile: React.FC = () => {
     };
   }, []);
 
+  const handleEventClick = (eventId: string) => {
+    navigate(`/events/${eventId}`);
+  };
+
   return (
     <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
       <div className="max-w-4xl mx-auto w-full px-4 py-6 flex-1 overflow-y-auto">
@@ -261,12 +268,17 @@ export const Profile: React.FC = () => {
               </div>
             ) : (
               currentEvents.map(event => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  showCancelButton={true}
-                  onCancel={() => handleCancelEvent(event.id)}
-                />
+                <div 
+                  key={event.id} 
+                  onClick={() => handleEventClick(event.id)}
+                  className="cursor-pointer"
+                >
+                  <EventCard
+                    event={event as unknown as Event}
+                    showCancelButton={true}
+                    onCancel={() => handleCancelEvent(event.id)}
+                  />
+                </div>
               ))
             )}
           </div>

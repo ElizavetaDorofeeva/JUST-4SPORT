@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { eventApi, EventCreateDto } from '../api/event';
+import { eventApi, EventCreateDto, ApplicationDto } from '../api/event';
 import { tokenStorage } from '../utils/tokenStorage';
 import { useAuth } from '../contexts/AuthContext';
 import { EditEventModal } from '../components/ui/EditEventModal';
+import { ApplicationModal } from '../components/ui/ApplicationModal';
 
 interface EventDetail {
   id: string;
@@ -63,6 +64,10 @@ export const EventDetailPage: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -259,6 +264,23 @@ export const EventDetailPage: React.FC = () => {
       CANCELLED: 'bg-red-100 text-red-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const handleSubmitApplication = async (application: ApplicationDto) => {
+    if (!id) return;
+    
+    setIsSubmitting(true);
+    try {
+      await eventApi.submitApplication(id, application);
+      setHasApplied(true);
+      setShowApplicationModal(false);
+      alert('✅ Заявка успешно отправлена!');
+    } catch (error) {
+      console.error('Failed to submit application:', error);
+      alert('❌ Ошибка при отправке заявки');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -491,11 +513,20 @@ export const EventDetailPage: React.FC = () => {
             )}
 
             {!isAuthor && event.eventStatus === 'WILL_BE' && (
-              <button
-                className="w-full py-3 bg-[#8B1E1E] text-white rounded-xl hover:bg-[#6B1616] transition-colors font-medium text-lg"
-              >
-                Подать заявку
-              </button>
+              <div>
+                {hasApplied ? (
+                  <div className="w-full py-3 bg-green-100 text-green-800 rounded-xl text-center font-medium text-lg">
+                    Заявка подана
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowApplicationModal(true)}
+                    className="w-full py-3 bg-[#8B1E1E] text-white rounded-xl hover:bg-[#6B1616] transition-colors font-medium text-lg"
+                  >
+                    Подать заявку
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -508,6 +539,15 @@ export const EventDetailPage: React.FC = () => {
           onSave={handleUpdateEvent}
           initialData={getEventDataForEdit()}
           loading={isUpdating}
+        />
+      )}
+
+      {!isAuthor && (
+        <ApplicationModal
+          isOpen={showApplicationModal}
+          onClose={() => setShowApplicationModal(false)}
+          onSubmit={handleSubmitApplication}
+          loading={isSubmitting}
         />
       )}
     </div>
