@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { eventApi, EventCreateDto, ApplicationDto } from '../api/event';
+import { eventApi, EventCreateDto, ApplicationDto, Participant } from '../api/event';
 import { tokenStorage } from '../utils/tokenStorage';
 import { useAuth } from '../contexts/AuthContext';
 import { EditEventModal } from '../components/ui/EditEventModal';
 import { ApplicationModal } from '../components/ui/ApplicationModal';
+import { CommentsSection } from '../components/ui/CommentsSection';
+import { EventStatusPanel } from '../components/ui/EventStatusPanel';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { TeamDetailsModal } from '../components/ui/TeamDetailsModal';
 
 interface EventDetail {
   id: string;
@@ -64,15 +68,18 @@ export const EventDetailPage: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasApplied, setHasApplied] = useState(false);
+
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [userRole, setUserRole] = useState<'NONE' | 'CAPTAIN' | 'MEMBER'>('NONE');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<Participant | null>(null);
+  const [showTeamModal, setShowTeamModal] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      loadEvent();
-    }
+    if (id) loadEvent();
   }, [id]);
 
   useEffect(() => {
@@ -81,19 +88,15 @@ export const EventDetailPage: React.FC = () => {
         setPhotoUrl(null);
         return;
       }
-
       try {
         const token = tokenStorage.getAccessToken();
         const headers: HeadersInit = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/photo/${event.photo.path}`,
           { headers }
         );
-
         if (response.ok) {
           const blob = await response.blob();
           const url = URL.createObjectURL(blob);
@@ -103,21 +106,23 @@ export const EventDetailPage: React.FC = () => {
         console.error('❌ Не удалось загрузить фото:', error);
       }
     };
-
     loadPhoto();
-
     return () => {
-      if (photoUrl) {
-        URL.revokeObjectURL(photoUrl);
-      }
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
     };
   }, [event?.photo?.path]);
 
   const loadEvent = async () => {
     setLoading(true);
     try {
-      const data = await eventApi.getEventById(id!);
-      setEvent(data);
+      const eventData = await eventApi.getEventById(id!);
+      setEvent(eventData);
+      
+      const participantsData = await eventApi.getParticipants(id!);
+      setParticipants(participantsData);
+      
+      const role = determineUserRole(participantsData, user?.id);
+      setUserRole(role);
     } catch (error) {
       console.error('Failed to load event:', error);
     } finally {
@@ -125,51 +130,58 @@ export const EventDetailPage: React.FC = () => {
     }
   };
 
-  const handleUpdateEvent = async (data: EventCreateDto) => {
-  if (!id) return;
-  
-  setIsUpdating(true);
-  try {
-    const formatDateTime = (dateString: string) => {
-      if (!dateString) return null;
-      return dateString.length === 16 ? `${dateString}:00` : dateString;
-    };
-
-    const payload = {
-      name: data.name,
-      description: data.description,
-      place: data.place,
-      cost: Number(data.cost),
-      sport: event!.sport,
-      eventType: event!.eventType,
-      skillLevel: event!.skillLevel,
-      teamsNumber: Number(data.teamsNumber),
-      dateStart: formatDateTime(data.dateStart),
-      dateEnd: formatDateTime(data.dateEnd),
-      deadline: data.deadline ? formatDateTime(data.deadline) : null
-    };
+  const handleCancelApplication = async () => {
+    if (!id) return;
     
-    await eventApi.updateEvent(id, payload as any);
-    await loadEvent();
-    setShowEditModal(false);
-  } catch (error) {
-    console.error('Failed to update event:', error);
-    alert('❌ Ошибка при обновлении мероприятия');
-  } finally {
-    setIsUpdating(false);
-  }
-};
+    try {
+      await eventApi.cancelApplication(id);
+      setUserRole('NONE');
+      setShowCancelConfirm(false);
+      await loadEvent();
+    } catch (error) {
+      console.error('Failed to cancel application:', error);
+      alert('❌ Ошибка при отмене заявки');
+    }
+  };
+
+  const handleUpdateEvent = async (data: EventCreateDto) => {
+    if (!id) return;
+    setIsUpdating(true);
+    try {
+      const formatDateTime = (dateString: string) => {
+        if (!dateString) return null;
+        return dateString.length === 16 ? `${dateString}:00` : dateString;
+      };
+      const payload = {
+        name: data.name,
+        description: data.description,
+        place: data.place,
+        cost: Number(data.cost),
+        sport: event!.sport,
+        eventType: event!.eventType,
+        skillLevel: event!.skillLevel,
+        teamsNumber: Number(data.teamsNumber),
+        dateStart: formatDateTime(data.dateStart),
+        dateEnd: formatDateTime(data.dateEnd),
+        deadline: data.deadline ? formatDateTime(data.deadline) : null
+      };
+      await eventApi.updateEvent(id, payload as any);
+      await loadEvent();
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Failed to update event:', error);
+      alert('❌ Ошибка при обновлении мероприятия');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleDeleteEvent = async () => {
     if (!id) return;
-    
-    if (!window.confirm('Вы уверены, что хотите удалить это мероприятие?')) {
-      return;
-    }
-
     setIsDeleting(true);
     try {
       await eventApi.deleteEvent(id);
+      setShowDeleteConfirm(false);
       navigate('/');
     } catch (error) {
       console.error('Failed to delete event:', error);
@@ -179,18 +191,31 @@ export const EventDetailPage: React.FC = () => {
     }
   };
 
+  const handleSubmitApplication = async (application: ApplicationDto) => {
+    if (!id) return;
+    setIsSubmitting(true);
+    try {
+      await eventApi.submitApplication(id, application);
+      setShowApplicationModal(false);
+      await loadEvent();
+    } catch (error) {
+      console.error('Failed to submit application:', error);
+      alert('❌ Ошибка при отправке заявки');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const isAuthor = event && user ? event.author.id === user.id : false;
 
   const getEventDataForEdit = (): EventCreateDto => {
     if (!event) return {} as EventCreateDto;
-    
     const formatForInput = (isoString: string) => {
       if (!isoString) return '';
       const date = new Date(isoString);
       const pad = (n: number) => String(n).padStart(2, '0');
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     };
-
     return {
       name: event.name,
       description: event.description,
@@ -207,6 +232,7 @@ export const EventDetailPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return '—';
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU', {
       day: 'numeric',
@@ -217,41 +243,40 @@ export const EventDetailPage: React.FC = () => {
     });
   };
 
+  const handleTeamClick = (teamId: string) => {
+    const team = participants.find(t => t.id === teamId);
+    if (team) {
+      setSelectedTeam(team);
+      setShowTeamModal(true);
+    }
+  };
+
   const getSportLabel = (sport: string) => {
     const labels: { [key: string]: string } = {
-      VOLLEYBALL: 'Волейбол',
-      BASKETBALL: 'Баскетбол',
-      SOCCER: 'Футбол',
-      HOCKEY: 'Хоккей',
-      ULTIMATE: 'Алтимат'
+      VOLLEYBALL: 'Волейбол', BASKETBALL: 'Баскетбол',
+      SOCCER: 'Футбол', HOCKEY: 'Хоккей', ULTIMATE: 'Алтимат'
     };
     return labels[sport] || sport;
   };
 
   const getSkillLevelLabel = (level: string) => {
     const labels: { [key: string]: string } = {
-      START: 'Новичок',
-      MEDIUM: 'Средний',
-      HARD: 'Продвинутый'
+      START: 'Новичок', MEDIUM: 'Средний', HARD: 'Продвинутый'
     };
     return labels[level] || level;
   };
 
   const getEventTypeLabel = (type: string) => {
     const labels: { [key: string]: string } = {
-      TRAINING: 'Тренировка',
-      GAME: 'Игра',
-      TOURNAMENT: 'Турнир'
+      TRAINING: 'Тренировка', GAME: 'Игра', TOURNAMENT: 'Турнир'
     };
     return labels[type] || type;
   };
 
   const getStatusLabel = (status: string) => {
     const labels: { [key: string]: string } = {
-      WILL_BE: 'Предстоит',
-      UNDERWAY: 'В процессе',
-      FINISHED: 'Завершено',
-      CANCELLED: 'Отменено'
+      WILL_BE: 'Предстоит', UNDERWAY: 'В процессе',
+      FINISHED: 'Завершено', CANCELLED: 'Отменено'
     };
     return labels[status] || status;
   };
@@ -266,21 +291,20 @@ export const EventDetailPage: React.FC = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const handleSubmitApplication = async (application: ApplicationDto) => {
-    if (!id) return;
+  const determineUserRole = (participants: Participant[], userId: string | undefined): 'NONE' | 'CAPTAIN' | 'MEMBER' => {
+    if (!userId) return 'NONE';
     
-    setIsSubmitting(true);
-    try {
-      await eventApi.submitApplication(id, application);
-      setHasApplied(true);
-      setShowApplicationModal(false);
-      alert('✅ Заявка успешно отправлена!');
-    } catch (error) {
-      console.error('Failed to submit application:', error);
-      alert('❌ Ошибка при отправке заявки');
-    } finally {
-      setIsSubmitting(false);
+    for (const team of participants) {
+      if (team.captain.id === userId) {
+        return 'CAPTAIN';
+      }
+      
+      if (team.teamMembers.some(member => member.id === userId)) {
+        return 'MEMBER';
+      }
     }
+    
+    return 'NONE';
   };
 
   if (loading) {
@@ -301,158 +325,129 @@ export const EventDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         
         <button
           onClick={() => navigate(-1)}
-          className="mb-6 text-[#8B1E1E] hover:text-[#6B1616] transition-colors font-medium"
+          className="mb-6 text-[#8B1E1E] hover:text-[#6B1616] transition-colors font-medium flex items-center gap-2"
         >
-          ← Назад
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Назад
         </button>
 
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+          <div className="flex items-start gap-4 flex-wrap">
+            <h1 className="text-4xl font-bold text-gray-900 flex-1 min-w-[200px]">
+              {event.name}
+            </h1>
+            <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(event.eventStatus)}`}>
+              {getStatusLabel(event.eventStatus)}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {photoUrl && (
-            <div className="w-full h-64 bg-gray-100">
-              <img 
-                src={photoUrl} 
-                alt={event.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-
-          <div className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {event.name}
-                </h1>
-                <span className={`inline-block px-3 py-1 rounded-lg text-sm font-medium ${getStatusColor(event.eventStatus)}`}>
-                  {getStatusLabel(event.eventStatus)}
-                </span>
+          <div className="lg:col-span-2 space-y-6">
+            
+            {photoUrl && (
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <img 
+                  src={photoUrl} 
+                  alt={event.name}
+                  className="w-full h-80 object-cover"
+                />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                  Тип мероприятия
-                </h3>
-                <p className="text-lg text-gray-900">
-                  {getEventTypeLabel(event.eventType)}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                  Вид спорта
-                </h3>
-                <p className="text-lg text-gray-900">
-                  {getSportLabel(event.sport)}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                  Уровень
-                </h3>
-                <p className="text-lg text-gray-900">
-                  {getSkillLevelLabel(event.skillLevel)}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                  Стоимость
-                </h3>
-                <p className="text-lg text-gray-900">
-                  {event.cost === 0 ? 'Бесплатно' : `${event.cost} ₽`}
-                </p>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200 pt-6 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                    Дата начала
-                  </h3>
-                  <p className="text-gray-900">
-                    {formatDate(event.dateStart)}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                    Дата окончания
-                  </h3>
-                  <p className="text-gray-900">
-                    {formatDate(event.dateEnd)}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                    Место проведения
-                  </h3>
-                  <p className="text-gray-900">
-                    {event.place}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                    Дедлайн записи
-                  </h3>
-                  <p className="text-gray-900">
-                    {formatDate(event.deadline)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200 pt-6 mb-6">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                Организатор
-              </h3>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-600 font-medium">
-                    {event.author.name.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-gray-900 font-medium">
-                    {event.author.name}
-                  </p>
-                  <p className="text-gray-500 text-sm">
-                    @{event.author.nickname}
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
 
             {event.description && (
-              <div className="border-t border-gray-200 pt-6 mb-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                  Описание
-                </h3>
-                <p className="text-gray-700 whitespace-pre-wrap">
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Описание</h2>
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                   {event.description}
                 </p>
               </div>
             )}
 
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Детали</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Тип</p>
+                  <p className="text-lg font-medium text-gray-900">{getEventTypeLabel(event.eventType)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Вид спорта</p>
+                  <p className="text-lg font-medium text-gray-900">{getSportLabel(event.sport)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Уровень</p>
+                  <p className="text-lg font-medium text-gray-900">{getSkillLevelLabel(event.skillLevel)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Стоимость</p>
+                  <p className="text-lg font-medium text-gray-900">
+                    {event.cost === 0 ? 'Бесплатно' : `${event.cost} ₽`}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Начало</p>
+                  <p className="text-lg font-medium text-gray-900">{formatDate(event.dateStart)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Окончание</p>
+                  <p className="text-lg font-medium text-gray-900">{formatDate(event.dateEnd)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Место</p>
+                  <p className="text-lg font-medium text-gray-900">{event.place}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Дедлайн записи</p>
+                  <p className="text-lg font-medium text-gray-900">{formatDate(event.deadline)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Организатор</h2>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-[#8B1E1E] text-white flex items-center justify-center text-xl font-bold">
+                  {event.author.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-gray-900">{event.author.name}</p>
+                  <p className="text-gray-500">@{event.author.nickname}</p>
+                </div>
+              </div>
+            </div>
+
             {event.teams && event.teams.length > 0 && (
-              <div className="border-t border-gray-200 pt-6 mb-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                  Команды ({event.teams.length})
-                </h3>
-                <div className="space-y-2">
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  Команды
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {event.teams.map(team => (
-                    <div key={team.id} className="px-4 py-2 bg-gray-50 rounded-lg">
-                      {team.name}
+                    <div 
+                      key={team.id} 
+                      onClick={() => handleTeamClick(team.id)}
+                      className="px-4 py-3 bg-gray-50 rounded-lg font-medium text-gray-800 border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-gray-100 hover:border-[#8B1E1E]/30 transition-all group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#8B1E1E]/10 text-[#8B1E1E] flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {team.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="truncate flex-1">{team.name}</span>
+                      <svg 
+                        className="w-4 h-4 text-gray-400 group-hover:text-[#8B1E1E] transition-colors flex-shrink-0" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   ))}
                 </div>
@@ -460,31 +455,31 @@ export const EventDetailPage: React.FC = () => {
             )}
 
             {event.schedule?.games && event.schedule.games.length > 0 && (
-              <div className="border-t border-gray-200 pt-6 mb-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
-                  Расписание игр
-                </h3>
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  🏆 Расписание игр
+                </h2>
                 <div className="space-y-3">
                   {event.schedule.games.map(game => (
-                    <div key={game.id} className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">
-                          {formatDate(game.date)}
+                    <div key={game.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm text-gray-600 flex items-center gap-1">
+                          📅 {formatDate(game.date)}
                         </span>
                         {game.result && (
-                          <span className="text-sm font-medium text-gray-900">
+                          <span className="text-sm font-semibold text-[#8B1E1E] bg-white px-3 py-1 rounded-lg border border-gray-200">
                             {game.result}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900">
-                          {game.firstParticipant.name}
-                        </span>
-                        <span className="text-gray-400">vs</span>
-                        <span className="font-medium text-gray-900">
-                          {game.secondParticipant.name}
-                        </span>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 text-center">
+                          <p className="font-semibold text-gray-900">{game.firstParticipant.name}</p>
+                        </div>
+                        <span className="text-gray-400 font-bold">vs</span>
+                        <div className="flex-1 text-center">
+                          <p className="font-semibold text-gray-900">{game.secondParticipant.name}</p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -492,42 +487,25 @@ export const EventDetailPage: React.FC = () => {
               </div>
             )}
 
-            {isAuthor && event.eventStatus === 'WILL_BE' && (
-              <div className="space-y-3">
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  disabled={isUpdating}
-                  className="w-full py-3 bg-[#8B1E1E] text-white rounded-xl hover:bg-[#6B1616] transition-colors font-medium text-lg disabled:opacity-50"
-                >
-                  {isUpdating ? 'Сохранение...' : 'Редактировать мероприятие'}
-                </button>
-                
-                <button
-                  onClick={handleDeleteEvent}
-                  disabled={isDeleting}
-                  className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium text-lg disabled:opacity-50"
-                >
-                  {isDeleting ? 'Удаление...' : 'Удалить мероприятие'}
-                </button>
-              </div>
-            )}
+            <EventStatusPanel
+              userRole={userRole}
+              isAuthor={isAuthor}
+              eventStatus={event.eventStatus}
+              onApply={() => setShowApplicationModal(true)}
+              onCancel={() => setShowCancelConfirm(true)}
+              onEdit={() => setShowEditModal(true)}
+              onDelete={() => setShowDeleteConfirm(true)}
+            />
+          </div>
 
-            {!isAuthor && event.eventStatus === 'WILL_BE' && (
-              <div>
-                {hasApplied ? (
-                  <div className="w-full py-3 bg-green-100 text-green-800 rounded-xl text-center font-medium text-lg">
-                    Заявка подана
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowApplicationModal(true)}
-                    className="w-full py-3 bg-[#8B1E1E] text-white rounded-xl hover:bg-[#6B1616] transition-colors font-medium text-lg"
-                  >
-                    Подать заявку
-                  </button>
-                )}
-              </div>
-            )}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-24">
+              <CommentsSection
+                eventId={event.id}
+                comments={event.comments || []}
+                onCommentsChanged={loadEvent}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -537,7 +515,12 @@ export const EventDetailPage: React.FC = () => {
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
           onSave={handleUpdateEvent}
-          initialData={getEventDataForEdit()}
+          initialData={{
+            ...getEventDataForEdit(),
+            photo: event.photo
+          }}
+          eventId={event.id}
+          onPhotoChanged={loadEvent}
           loading={isUpdating}
         />
       )}
@@ -548,8 +531,34 @@ export const EventDetailPage: React.FC = () => {
           onClose={() => setShowApplicationModal(false)}
           onSubmit={handleSubmitApplication}
           loading={isSubmitting}
+          sport={event.sport}
         />
       )}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Удаление мероприятия"
+        message="Вы действительно хотите удалить все данные о мероприятие?"
+        confirmText="Удалить"
+        cancelText="Отмена"
+        onConfirm={handleDeleteEvent}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        title="Отмена заявки"
+        message="Вы уверены, что хотите отозвать заявку на участие?"
+        confirmText="Отозвать"
+        cancelText="Отмена"
+        onConfirm={handleCancelApplication}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
+
+        <TeamDetailsModal
+          isOpen={showTeamModal}
+          onClose={() => setShowTeamModal(false)}
+          team={selectedTeam}
+        />
     </div>
   );
 };

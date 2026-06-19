@@ -10,8 +10,6 @@ interface EventCardProps {
 
 export const EventCard: React.FC<EventCardProps> = ({
   event,
-  showCancelButton = false,
-  onCancel
 }) => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
@@ -79,13 +77,6 @@ export const EventCard: React.FC<EventCardProps> = ({
     return labels[type] || type;
   };
 
-  const handleCancelClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onCancel) {
-      onCancel();
-    }
-  };
-
   return (
     <div 
       className="bg-white border border-gray-200 rounded-lg p-4 flex gap-4 hover:shadow-md transition-shadow"
@@ -117,17 +108,6 @@ export const EventCard: React.FC<EventCardProps> = ({
           </p>
         )}
       </div>
-
-      {showCancelButton && onCancel && (
-        <div className="flex items-center">
-          <button
-            onClick={handleCancelClick}
-            className="text-[#8B1E1E] hover:text-[#6B1616] text-sm font-medium transition-colors"
-          >
-            Отозвать
-          </button>
-        </div>
-      )}
     </div>
   );
 };

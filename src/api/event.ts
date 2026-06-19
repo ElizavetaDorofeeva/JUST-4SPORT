@@ -67,6 +67,34 @@ export interface EventFilters {
   size?: number;
 }
 
+export interface CommentDto {
+  content: string;
+  parentId?: string | null;
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  authorName: string;
+  authorId: string;
+  parentId: string | null;
+}
+
+export interface Participant {
+  id: string;
+  name: string;
+  captain: {
+    id: string;
+    name: string;
+    nickname: string;
+  };
+  teamMembers: Array<{
+    id: string;
+    name: string;
+    nickname: string;
+  }>;
+}
+
 export const eventApi = {
   createEvent: async (eventData: EventCreateDto, imageFile?: File) => {
     const formData = new FormData();
@@ -127,5 +155,43 @@ export const eventApi = {
 
   submitApplication: async (eventId: string, application: ApplicationDto): Promise<void> => {
     await api.post(`/event/${eventId}/application`, application);
+  },
+
+  addComment: async (eventId: string, comment: CommentDto): Promise<void> => {
+    await api.post(`/comment/${eventId}`, comment);
+  },
+
+  updateComment: async (commentId: string, content: string): Promise<void> => {
+    await api.put(`/comment/${commentId}`, { content });
+  },
+
+  deleteComment: async (commentId: string): Promise<void> => {
+    await api.delete(`/comment/${commentId}`);
+  },
+
+  cancelApplication: async (eventId: string): Promise<void> => {
+    await api.delete(`/event/${eventId}/application`);
+  },
+
+  getParticipants: async (eventId: string): Promise<Participant[]> => {
+    try {
+      const response = await api.get(`/participants/${eventId}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        console.warn('⚠️ Нет доступа к участникам мероприятия');
+        return [];
+      }
+      throw error;
+    }
+  },
+  uploadEventPhoto: async (eventId: string, file: File): Promise<void> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    await api.post(`/author-events/${eventId}/photo`, formData);
+  },
+
+  deleteEventPhoto: async (eventId: string): Promise<void> => {
+    await api.delete(`/author-events/${eventId}/photo`);
   }
 };
