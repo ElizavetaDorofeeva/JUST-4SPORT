@@ -67,7 +67,7 @@ export const RegisterForm: React.FC = () => {
         confirmPassword: formData.confirmPassword,
         favoriteSports: formData.favoriteSports
       });
-      navigate('/dashboard');
+      navigate('/login');
     } catch (error: any) {
       if (error.response?.status === 409) {
         setErrors({ email: 'Пользователь с таким email уже существует' });

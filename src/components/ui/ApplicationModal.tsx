@@ -48,6 +48,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
   const minPlayers = MIN_PLAYERS[sport] || 4;
   const sportLabel = SPORT_LABELS[sport] || sport;
+  const minMembers = minPlayers - 1;
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -82,8 +83,8 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
       .map(n => n.trim())
       .filter(n => n.length > 0);
 
-    if (membersNicknames.length < minPlayers) {
-      setError(`Для ${sportLabel} нужно минимум ${minPlayers} участников. Сейчас указано: ${membersNicknames.length}`);
+    if (membersNicknames.length < minMembers) {
+      setError(`Для ${sportLabel} нужно минимум ${minPlayers} игроков (включая капитана). Сейчас указано: ${membersNicknames.length + 1}`);
       return;
     }
 
@@ -94,6 +95,13 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
       contactInformation: contactInfo
     });
   };
+
+  const currentMembersCount = membersText
+    .split(',')
+    .filter(n => n.trim().length > 0).length;
+  
+  const totalPlayers = currentMembersCount + 1;
+  const needMore = minPlayers - totalPlayers;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -107,7 +115,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
           Подать заявку на участие
         </h2>
         <p className="text-sm text-gray-600 mb-6">
-          {sportLabel} • минимум {minPlayers} участников
+          {sportLabel} • минимум {minPlayers} игроков
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -150,17 +158,15 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
               className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B1E1E]"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Перечислите никнеймы через запятую (без @)
+              Перечислите никнеймы через запятую (без @).
             </p>
             {membersText && (
               <p className={`text-xs mt-1 font-medium ${
-                membersText.split(',').filter(n => n.trim().length > 0).length >= minPlayers
-                  ? 'text-gray-600'
-                  : 'text-gray-600'
+                needMore <= 0 ? 'text-green-600' : 'text-orange-600'
               }`}>
-                {membersText.split(',').filter(n => n.trim().length > 0).length >= minPlayers
-                  ? `указано ${membersText.split(',').filter(n => n.trim().length > 0).length} из ${minPlayers} участников`
-                  : `указано ${membersText.split(',').filter(n => n.trim().length > 0).length} из ${minPlayers} участников`
+                {needMore <= 0
+                  ? ``
+                  : `Добавьте ещё ${needMore} ${needMore === 1 ? 'участника' : 'участников'}`
                 }
               </p>
             )}

@@ -5,12 +5,14 @@ interface TeamDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   team: Participant | null;
+  isAuthor?: boolean;
 }
 
 export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
   isOpen,
   onClose,
-  team
+  team,
+  isAuthor = false
 }) => {
   React.useEffect(() => {
     if (isOpen) {
@@ -54,10 +56,23 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
           </div>
         </div>
 
+        {isAuthor && team.contactInformation && (
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-gray-500 uppercase mb-2">
+              Контактная информация
+            </p>
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl">
+              <p className="text-sm text-gray-900 break-words">
+                {team.contactInformation}
+              </p>
+            </div>
+          </div>
+        )}
+
         {team.teamMembers && team.teamMembers.length > 0 && (
           <div>
             <p className="text-sm font-semibold text-gray-500 uppercase mb-2">
-              Участники ({team.teamMembers.length})
+              Участники
             </p>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {team.teamMembers.map(member => (

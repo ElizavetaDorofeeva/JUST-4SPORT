@@ -118,7 +118,14 @@ export const EventDetailPage: React.FC = () => {
       const eventData = await eventApi.getEventById(id!);
       setEvent(eventData);
       
-      const participantsData = await eventApi.getParticipants(id!);
+      let participantsData: Participant[];
+      
+      if (eventData.author.id === user?.id) {
+        participantsData = await eventApi.getParticipantsForAuthor(id!);
+      } else {
+        participantsData = await eventApi.getParticipants(id!);
+      }
+      
       setParticipants(participantsData);
       
       const role = determineUserRole(participantsData, user?.id);
@@ -558,6 +565,7 @@ export const EventDetailPage: React.FC = () => {
           isOpen={showTeamModal}
           onClose={() => setShowTeamModal(false)}
           team={selectedTeam}
+          isAuthor={isAuthor}
         />
     </div>
   );

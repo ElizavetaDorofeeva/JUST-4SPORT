@@ -93,6 +93,7 @@ export interface Participant {
     name: string;
     nickname: string;
   }>;
+  contactInformation: string; 
 }
 
 export const eventApi = {
@@ -185,6 +186,17 @@ export const eventApi = {
       throw error;
     }
   },
+
+  getParticipantsForAuthor: async (eventId: string): Promise<Participant[]> => {
+    try {
+      const response = await api.get(`/participants/${eventId}/author`);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Ошибка получения участников:', error);
+      throw error;
+    }
+  },
+
   uploadEventPhoto: async (eventId: string, file: File): Promise<void> => {
     const formData = new FormData();
     formData.append('file', file);
