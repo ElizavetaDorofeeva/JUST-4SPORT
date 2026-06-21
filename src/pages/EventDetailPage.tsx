@@ -567,6 +567,37 @@ export const EventDetailPage: React.FC = () => {
               />
             )}
 
+            {event.eventType === 'TOURNAMENT' && event.schedule?.games && event.schedule.games.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  Расписание игр
+                </h2>
+                <div className="space-y-3">
+                  {event.schedule.games.map(game => (
+                    <div key={game.id} className="flex items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <span className="text-sm text-gray-600 min-w-[180px]">
+                        {formatDate(game.date)}
+                      </span>
+                      <div className="flex-1 flex items-center justify-center gap-3">
+                        <span className="font-semibold text-gray-900 text-right flex-1 truncate">
+                          {game.firstParticipant.name}
+                        </span>
+                        <span className="text-gray-400 font-bold text-sm">vs</span>
+                        <span className="font-semibold text-gray-900 text-left flex-1 truncate">
+                          {game.secondParticipant.name}
+                        </span>
+                      </div>
+                      {game.result && game.result !== 'string' && (
+                        <span className="text-sm font-semibold text-[#8B1E1E] bg-white px-3 py-1 rounded-lg border border-gray-200 min-w-[60px] text-center">
+                          {game.result}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {event.eventType !== 'TOURNAMENT' && event.schedule?.games && event.schedule.games.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
