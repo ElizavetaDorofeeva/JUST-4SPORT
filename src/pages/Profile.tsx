@@ -125,9 +125,6 @@ export const Profile: React.FC = () => {
   const handleSaveProfile = async (data: { 
     name?: string; nickname?: string; email?: string; favoriteSports?: string[] 
   }) => {
-    const userId = user?.id;
-    if (!userId) return;
-
     setSavingProfile(true);
     try {
       const fullData = {
@@ -137,7 +134,7 @@ export const Profile: React.FC = () => {
         favoriteSports: data.favoriteSports || profile?.favoriteSports || []
       };
       
-      await userApi.updateProfile(userId, fullData);
+      await userApi.updateProfile(fullData);
       const updated = await userApi.getProfile();
       setProfile(updated);
       setShowEditModal(false);

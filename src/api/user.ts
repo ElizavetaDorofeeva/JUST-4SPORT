@@ -14,13 +14,13 @@ export const userApi = {
     return response.data;
   },
 
-  updateProfile: async (userId: string, data: UpdateProfileDto): Promise<UserProfile> => {
-    const response = await api.put(`/profile/${userId}`, data);
+  updateProfile: async (data: UpdateProfileDto): Promise<UserProfile> => {
+    const response = await api.put('/profile', data);
     return response.data;
   },
 
-  deleteProfile: async (userId: string): Promise<void> => {
-    await api.delete(`/profile/${userId}`);
+  deleteProfile: async (): Promise<void> => {
+    await api.delete('/profile');
   },
 
   updatePhoto: async (file: File): Promise<void> => {
