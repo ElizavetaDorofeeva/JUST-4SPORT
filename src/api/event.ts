@@ -96,6 +96,53 @@ export interface Participant {
   contactInformation: string; 
 }
 
+export interface EventDetail {
+  id: string;
+  eventStatus: string;
+  name: string;
+  description: string;
+  dateStart: string;
+  dateEnd: string;
+  place: string;
+  cost: number;
+  sport: string;
+  eventType: string;
+  skillLevel: string;
+  author: {
+    id: string;
+    name: string;
+    nickname: string;
+  };
+  photo: {
+    id: string;
+    title: string;
+    path: string;
+  } | null;
+  schedule: {
+    id: string;
+    games: Array<{
+      id: string;
+      date: string;
+      result: string;
+      firstParticipant: { id: string; name: string };
+      secondParticipant: { id: string; name: string };
+    }>;
+  } | null;
+  teams: Array<{
+    id: string;
+    name: string;
+  }>;
+  deadline: string;
+  teamsNumber: number;
+  comments: Array<{
+    id: string;
+    content: string;
+    authorName: string;
+    authorId: string;
+    parentId: string | null;
+  }>;
+}
+
 export const eventApi = {
   createEvent: async (eventData: EventCreateDto, imageFile?: File) => {
     const formData = new FormData();
@@ -205,5 +252,25 @@ export const eventApi = {
 
   deleteEventPhoto: async (eventId: string): Promise<void> => {
     await api.delete(`/author-events/${eventId}/photo`);
+  },
+
+  updateGameResult: async (eventId: string, gameId: string, result: string): Promise<void> => {
+    await api.put(`/author-events/${eventId}/table`, [{
+      id: gameId,
+      result: result
+    }]);
+  },
+
+  updateSchedule: async (eventId: string, games: Array<{
+    id?: string;
+    date: string;
+    firstParticipantId: string;
+    secondParticipantId: string;
+  }>): Promise<void> => {
+    await api.put(`/author-events/${eventId}/schedule`, { games });
+  },
+
+  deleteTeam: async (eventId: string, teamId: string): Promise<void> => {
+    await api.delete(`/participants/${eventId}/${teamId}`);
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { eventApi, EventCreateDto, ApplicationDto, Participant } from '../api/event';
+import { eventApi, EventCreateDto, ApplicationDto, Participant, EventDetail } from '../api/event';
 import { tokenStorage } from '../utils/tokenStorage';
 import { useAuth } from '../contexts/AuthContext';
 import { EditEventModal } from '../components/ui/EditEventModal';
@@ -9,53 +9,8 @@ import { CommentsSection } from '../components/ui/CommentsSection';
 import { EventStatusPanel } from '../components/ui/EventStatusPanel';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { TeamDetailsModal } from '../components/ui/TeamDetailsModal';
-
-interface EventDetail {
-  id: string;
-  eventStatus: string;
-  name: string;
-  description: string;
-  dateStart: string;
-  dateEnd: string;
-  place: string;
-  cost: number;
-  sport: string;
-  eventType: string;
-  skillLevel: string;
-  author: {
-    id: string;
-    name: string;
-    nickname: string;
-  };
-  photo: {
-    id: string;
-    title: string;
-    path: string;
-  } | null;
-  schedule: {
-    id: string;
-    games: Array<{
-      id: string;
-      date: string;
-      result: string;
-      firstParticipant: { id: string; name: string };
-      secondParticipant: { id: string; name: string };
-    }>;
-  } | null;
-  teams: Array<{
-    id: string;
-    name: string;
-  }>;
-  deadline: string;
-  teamsNumber: number;
-  comments: Array<{
-    id: string;
-    content: string;
-    authorName: string;
-    authorId: string;
-    parentId: string | null;
-  }>;
-}
+import { TournamentTable } from '../components/ui/TournamentTable';
+import { ScheduleManager } from '../components/ui/ScheduleManager';
 
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -137,6 +92,22 @@ export const EventDetailPage: React.FC = () => {
     }
   };
 
+  const handleUpdateSchedule = async (games: Array<{
+    id?: string;
+    date: string;
+    firstParticipantId: string;
+    secondParticipantId: string;
+  }>) => {
+    if (!id) return;
+    try {
+      await eventApi.updateSchedule(id, games);
+      await loadEvent();
+    } catch (error) {
+      console.error('Failed to update schedule:', error);
+      alert('❌ Ошибка при обновлении расписания');
+    }
+  };
+
   const handleCancelApplication = async () => {
     if (!id) return;
     
@@ -148,6 +119,17 @@ export const EventDetailPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to cancel application:', error);
       alert('❌ Ошибка при отмене заявки');
+    }
+  };
+
+  const handleUpdateGameResult = async (gameId: string, result: string) => {
+    if (!id) return;
+    try {
+      await eventApi.updateGameResult(id, gameId, result);
+      await loadEvent();
+    } catch (error) {
+      console.error('Failed to update result:', error);
+      alert('❌ Ошибка при сохранении результата');
     }
   };
 
@@ -461,19 +443,34 @@ export const EventDetailPage: React.FC = () => {
               </div>
             )}
 
-            {event.schedule?.games && event.schedule.games.length > 0 && (
+            {isAuthor && event.eventType === 'TOURNAMENT' && (
+              <ScheduleManager
+                event={event}
+                onUpdateSchedule={handleUpdateSchedule}
+              />
+            )}
+
+            {event.eventType === 'TOURNAMENT' && event.teams && event.teams.length > 0 && (
+              <TournamentTable
+                event={event}
+                isAuthor={isAuthor}
+                onUpdateResult={handleUpdateGameResult}
+              />
+            )}
+
+            {event.eventType !== 'TOURNAMENT' && event.schedule?.games && event.schedule.games.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  🏆 Расписание игр
+                  Расписание игр
                 </h2>
                 <div className="space-y-3">
                   {event.schedule.games.map(game => (
                     <div key={game.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm text-gray-600 flex items-center gap-1">
-                          📅 {formatDate(game.date)}
+                            {formatDate(game.date)}
                         </span>
-                        {game.result && (
+                        {game.result && game.result !== 'string' && (
                           <span className="text-sm font-semibold text-[#8B1E1E] bg-white px-3 py-1 rounded-lg border border-gray-200">
                             {game.result}
                           </span>

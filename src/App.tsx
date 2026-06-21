@@ -9,6 +9,7 @@ import { Profile } from './pages/Profile';
 import { CreateEvent } from './pages/CreateEvent';
 import { HomePage } from './pages/HomePage'; 
 import { EventDetailPage } from './pages/EventDetailPage';
+import { UserPublicProfile } from './pages/UserPublicProfile';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,6 +32,7 @@ const AppContent: React.FC = () => {
           <Route path="/create" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
+          <Route path="/users/:userId" element={<UserPublicProfile />} />
         </Routes>
       </main>
     </>
