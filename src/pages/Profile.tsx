@@ -8,6 +8,7 @@ import { PhotoManagementModal } from '../components/ui/PhotoManagementModal';
 import { tokenStorage } from '../utils/tokenStorage';
 import { useNavigate } from 'react-router-dom';
 import { Event } from '../api/event';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 
 type TabType = 'participant' | 'author';
 
@@ -21,6 +22,8 @@ export const Profile: React.FC = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadPhoto = async () => {
@@ -175,6 +178,19 @@ export const Profile: React.FC = () => {
     navigate(`/events/${eventId}`);
   };
 
+  const handleDeleteProfile = async () => {
+    setIsDeleting(true);
+    try {
+      await userApi.deleteProfile();
+      tokenStorage.clear();
+      setShowDeleteConfirm(false);
+      navigate('/login');
+    } catch (error) {
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
       <div className="max-w-4xl mx-auto w-full px-4 py-6 flex-1 overflow-y-auto">
@@ -201,19 +217,28 @@ export const Profile: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                {profile?.name || user?.name || 'Пользователь'}
-              </h1>
-              <p className="text-gray-500 mb-4">@{profile?.nickname || 'user'}</p>
-              
+           <div className="flex-1">
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              {profile?.name || user?.name || 'Пользователь'}
+            </h1>
+            <p className="text-gray-500 mb-4">@{profile?.nickname || 'user'}</p>
+            
+            <div className="flex gap-3 flex-wrap">
               <button 
                 onClick={() => setShowEditModal(true)}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium border border-gray-200"
               >
                 Редактировать профиль
               </button>
+              
+              <button 
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium border border-red-200"
+              >
+                Удалить аккаунт
+              </button>
             </div>
+          </div>
           </div>
 
           <div className="mb-6">
@@ -295,6 +320,16 @@ export const Profile: React.FC = () => {
         hasPhoto={!!profile?.photo?.path}
         onUpload={handleUploadPhoto}
         onDelete={handleDeletePhoto}
+      />
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Удаление аккаунта"
+        message="Вы уверены, что хотите удалить аккаунт? Все ваши данные будут удалены."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        onConfirm={handleDeleteProfile}
+        onCancel={() => setShowDeleteConfirm(false)}
       />
     </div>
   );

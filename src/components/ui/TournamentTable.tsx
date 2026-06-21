@@ -35,10 +35,18 @@ export const TournamentTable: React.FC<TournamentTableProps> = ({
     );
   };
 
-  const getGameResult = (team1Id: string, team2Id: string): string | null => {
-    const game = findGame(team1Id, team2Id);
+  const getGameResult = (rowTeamId: string, colTeamId: string): string | null => {
+    const game = findGame(rowTeamId, colTeamId);
     if (!game || !game.result || game.result === 'string') return null;
-    return game.result;
+    
+    const [goals1, goals2] = game.result.split(':').map(Number);
+    
+    if (game.firstParticipant.id === rowTeamId) {
+      return `${goals1}:${goals2}`;
+    } 
+    else {
+      return `${goals2}:${goals1}`;
+    }
   };
 
   const calculateStandings = (): TeamStats[] => {
