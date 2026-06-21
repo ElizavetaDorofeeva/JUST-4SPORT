@@ -402,14 +402,35 @@ export const EventDetailPage: React.FC = () => {
 
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Организатор</h2>
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#8B1E1E] text-white flex items-center justify-center text-xl font-bold">
+              <div 
+                onClick={() => {
+                  if (user?.id === event.author.id) {
+                    navigate('/profile');
+                  } else {
+                    navigate(`/users/${event.author.id}`);
+                  }
+                }}
+                className="flex items-center gap-4 p-3 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-[#8B1E1E]/30 border border-transparent transition-all group"
+              >
+                <div className="w-14 h-14 rounded-full bg-[#8B1E1E] text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
                   {event.author.name.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-lg font-medium text-gray-900">{event.author.name}</p>
-                  <p className="text-gray-500">@{event.author.nickname}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-medium text-gray-900 truncate">
+                    {event.author.name}
+                  </p>
+                  <p className="text-gray-500 truncate">
+                    @{event.author.nickname}
+                  </p>
                 </div>
+                <svg 
+                  className="w-5 h-5 text-gray-400 group-hover:text-[#8B1E1E] transition-colors flex-shrink-0" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </div>
 
@@ -558,12 +579,14 @@ export const EventDetailPage: React.FC = () => {
         onCancel={() => setShowCancelConfirm(false)}
       />
 
-        <TeamDetailsModal
-          isOpen={showTeamModal}
-          onClose={() => setShowTeamModal(false)}
-          team={selectedTeam}
-          isAuthor={isAuthor}
-        />
+      <TeamDetailsModal
+        isOpen={showTeamModal}
+        onClose={() => setShowTeamModal(false)}
+        team={selectedTeam}
+        eventId={event.id}
+        isAuthor={isAuthor}
+        onTeamDeleted={loadEvent}
+      />
     </div>
   );
 };

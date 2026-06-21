@@ -104,7 +104,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
       <div className="max-h-[550px] overflow-y-auto pr-2 space-y-4 scrollbar-hide">
         {comments.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
-            Пока нет комментариев. Будьте первым!
+            Пока нет комментариев.
           </p>
         ) : (
           comments.map(comment => (
