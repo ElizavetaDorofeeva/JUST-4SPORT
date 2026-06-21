@@ -55,6 +55,15 @@ export const HomePage: React.FC = () => {
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   const [sortBy, setSortBy] = useState('DATE,ASC');
+  const [eventStatus, setEventStatus] = useState('');
+
+  const STATUS_OPTIONS = [
+    { value: '', label: '- -' },
+    { value: 'WILL_BE', label: 'Предстоит' },
+    { value: 'UNDERWAY', label: 'В процессе' },
+    { value: 'FINISHED', label: 'Завершено' },
+    { value: 'CANCELLED', label: 'Отменено' }
+  ];
 
   useEffect(() => {
     loadEvents();
@@ -75,7 +84,7 @@ export const HomePage: React.FC = () => {
       const filtersToSend: EventFilters = {
         ...filters,
         name: searchName || undefined,
-        status: registrationOpen ? 'WILL_BE' : undefined,
+        status: eventStatus || undefined,
         costStart: costStart ? Number(costStart) : undefined,
         costEnd: costEnd ? Number(costEnd) : undefined,
         dateStart: formatDateTime(dateStart),
@@ -107,6 +116,7 @@ export const HomePage: React.FC = () => {
       size: 20
     });
     setSearchName('');
+    setEventStatus('');
     setRegistrationOpen(false);
     setCostStart('');
     setCostEnd('');
@@ -226,6 +236,21 @@ export const HomePage: React.FC = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Статус
+                  </label>
+                  <select
+                    value={eventStatus}
+                    onChange={(e) => setEventStatus(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B1E1E]"
+                  >
+                    {STATUS_OPTIONS.map(s => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Стоимость от
                   </label>
                   <input
@@ -294,7 +319,7 @@ export const HomePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-end gap-3">
                 {hasActiveFilters && (
                   <button
                     onClick={clearAllFilters}

@@ -9,6 +9,10 @@ interface EventStatusPanelProps {
   onCancel: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onFinish: () => void;
+  onCancelEvent: () => void;
+  isFinishing?: boolean;
+  isCancelling?: boolean;
 }
 
 export const EventStatusPanel: React.FC<EventStatusPanelProps> = ({
@@ -19,7 +23,11 @@ export const EventStatusPanel: React.FC<EventStatusPanelProps> = ({
   onApply,
   onCancel,
   onEdit,
-  onDelete
+  onDelete,
+  onFinish,
+  onCancelEvent,
+  isFinishing = false,
+  isCancelling = false
 }) => {
   const canApply = eventStatus === 'WILL_BE' && !registrationClosed;
 
@@ -34,6 +42,26 @@ export const EventStatusPanel: React.FC<EventStatusPanelProps> = ({
           >
             Редактировать мероприятие
           </button>
+          
+          {(eventStatus === 'WILL_BE' || eventStatus === 'UNDERWAY') && (
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={onFinish}
+                disabled={isFinishing}
+                className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium text-lg flex items-center justify-center gap-2"
+              >
+                {isFinishing ? 'Завершение...' : 'Завершить'}
+              </button>
+              <button
+                onClick={onCancelEvent}
+                disabled={isCancelling}
+                className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium text-lg flex items-center justify-center gap-2"
+              >
+                {isCancelling ? 'Отмена...' : 'Отменить'}
+              </button>
+            </div>
+          )}
+          
           <button
             onClick={onDelete}
             className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium text-lg flex items-center justify-center gap-2"

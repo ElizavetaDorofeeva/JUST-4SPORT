@@ -29,12 +29,48 @@ export const EventDetailPage: React.FC = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [userRole, setUserRole] = useState<'NONE' | 'CAPTAIN' | 'MEMBER'>('NONE');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Participant | null>(null);
   const [showTeamModal, setShowTeamModal] = useState(false);
 
   const [isClosingRegistration, setIsClosingRegistration] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  const [showCancelApplicationConfirm, setShowCancelApplicationConfirm] = useState(false);
+  const [showCancelEventConfirm, setShowCancelEventConfirm] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleFinishEvent = async () => {
+    if (!id) return;
+    
+    setIsFinishing(true);
+    try {
+      await eventApi.finishEvent(id);
+      setShowFinishConfirm(false);
+      await loadEvent();
+    } catch (error) {
+      console.error('❌ Ошибка при завершении:', error);
+      alert('❌ Не удалось завершить мероприятие');
+    } finally {
+      setIsFinishing(false);
+    }
+  };
+
+  const handleCancelEvent = async () => {
+    if (!id) return;
+    
+    setIsCancelling(true);
+    try {
+      await eventApi.cancelEvent(id);
+      setShowCancelEventConfirm(false);
+      await loadEvent();
+    } catch (error) {
+      console.error('❌ Ошибка при отмене:', error);
+      alert('❌ Не удалось отменить мероприятие');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const handleCloseRegistration = async () => {
     if (!id) return;
@@ -133,7 +169,7 @@ export const EventDetailPage: React.FC = () => {
     try {
       await eventApi.cancelApplication(id);
       setUserRole('NONE');
-      setShowCancelConfirm(false);
+      setShowCancelApplicationConfirm(false);
       await loadEvent();
     } catch (error) {
       console.error('Failed to cancel application:', error);
@@ -568,11 +604,15 @@ export const EventDetailPage: React.FC = () => {
               userRole={userRole}
               isAuthor={isAuthor}
               eventStatus={event.eventStatus}
+              registrationClosed={event.registrationClosed}
               onApply={() => setShowApplicationModal(true)}
-              onCancel={() => setShowCancelConfirm(true)}
+              onCancel={() => setShowCancelApplicationConfirm(true)}  // ✅ Исправлено
               onEdit={() => setShowEditModal(true)}
               onDelete={() => setShowDeleteConfirm(true)}
-              registrationClosed={event.registrationClosed}
+              onFinish={() => setShowFinishConfirm(true)}              // ✅ Добавлено
+              onCancelEvent={() => setShowCancelEventConfirm(true)}    // ✅ Добавлено
+              isFinishing={isFinishing}                                // ✅ Добавлено
+              isCancelling={isCancelling}                              // ✅ Добавлено
             />
           </div>
 
@@ -623,13 +663,23 @@ export const EventDetailPage: React.FC = () => {
       />
 
       <ConfirmModal
-        isOpen={showCancelConfirm}
+        isOpen={showCancelApplicationConfirm}
         title="Отмена заявки"
         message="Вы уверены, что хотите отозвать заявку на участие?"
         confirmText="Отозвать"
         cancelText="Отмена"
         onConfirm={handleCancelApplication}
-        onCancel={() => setShowCancelConfirm(false)}
+        onCancel={() => setShowCancelApplicationConfirm(false)}
+      />
+
+      <ConfirmModal
+        isOpen={showCancelEventConfirm}
+        title="Отменить мероприятие"
+        message="Вы уверены, что хотите отменить это мероприятие? Мероприятие останется в системе, но будет помечено как отменённое."
+        confirmText="Отменить"
+        cancelText="Нет"
+        onConfirm={handleCancelEvent}
+        onCancel={() => setShowCancelEventConfirm(false)}
       />
 
       <TeamDetailsModal
@@ -649,6 +699,16 @@ export const EventDetailPage: React.FC = () => {
         cancelText="Отмена"
         onConfirm={handleCloseRegistration}
         onCancel={() => setShowCloseConfirm(false)}
+      />
+
+      <ConfirmModal
+        isOpen={showFinishConfirm}
+        title="Завершить мероприятие"
+        message="Вы уверены, что хотите завершить это мероприятие?"
+        confirmText="Завершить"
+        cancelText="Отмена"
+        onConfirm={handleFinishEvent}
+        onCancel={() => setShowFinishConfirm(false)}
       />
     </div>
   );

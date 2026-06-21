@@ -277,5 +277,13 @@ export const eventApi = {
 
   closeRegistration: async (eventId: string): Promise<void> => {
     await api.put(`/participants/${eventId}/close`);
+  },
+
+  finishEvent: async (eventId: string): Promise<void> => {
+    await api.put(`/author-events/${eventId}/finish`);
+  },
+
+  cancelEvent: async (eventId: string): Promise<void> => {
+    await api.put(`/author-events/${eventId}/cancel`);
   }
 };
