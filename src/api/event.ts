@@ -141,6 +141,7 @@ export interface EventDetail {
     authorId: string;
     parentId: string | null;
   }>;
+  registrationClosed?: boolean;
 }
 
 export const eventApi = {
@@ -272,5 +273,9 @@ export const eventApi = {
 
   deleteTeam: async (eventId: string, teamId: string): Promise<void> => {
     await api.delete(`/participants/${eventId}/${teamId}`);
+  },
+
+  closeRegistration: async (eventId: string): Promise<void> => {
+    await api.put(`/participants/${eventId}/close`);
   }
 };

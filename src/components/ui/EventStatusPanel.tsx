@@ -4,6 +4,7 @@ interface EventStatusPanelProps {
   userRole: 'NONE' | 'CAPTAIN' | 'MEMBER';
   isAuthor: boolean;
   eventStatus: string;
+  registrationClosed?: boolean;
   onApply: () => void;
   onCancel: () => void;
   onEdit: () => void;
@@ -14,31 +15,13 @@ export const EventStatusPanel: React.FC<EventStatusPanelProps> = ({
   userRole,
   isAuthor,
   eventStatus,
+  registrationClosed = false,
   onApply,
   onCancel,
   onEdit,
   onDelete
 }) => {
-  if (eventStatus !== 'WILL_BE') {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <div className="text-center py-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
-            <span className="text-2xl">
-              {eventStatus === 'UNDERWAY'}
-              {eventStatus === 'FINISHED'}
-              {eventStatus === 'CANCELLED'}
-            </span>
-            <p className="text-gray-700 font-medium">
-              {eventStatus === 'UNDERWAY' && 'Мероприятие в процессе'}
-              {eventStatus === 'FINISHED' && 'Мероприятие завершено'}
-              {eventStatus === 'CANCELLED' && 'Мероприятие отменено'}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const canApply = eventStatus === 'WILL_BE' && !registrationClosed;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -82,12 +65,22 @@ export const EventStatusPanel: React.FC<EventStatusPanelProps> = ({
       )}
 
       {!isAuthor && userRole === 'NONE' && (
-        <button
-          onClick={onApply}
-          className="w-full py-4 bg-gradient-to-r from-[#8B1E1E] to-[#6B1616] text-white rounded-xl hover:from-[#6B1616] hover:to-[#5A1212] transition-all font-medium text-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        >
-          Подать заявку на участие
-        </button>
+        canApply ? (
+          <button
+            onClick={onApply}
+            className="w-full py-4 bg-gradient-to-r from-[#8B1E1E] to-[#6B1616] text-white rounded-xl hover:from-[#6B1616] hover:to-[#5A1212] transition-all font-medium text-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          >
+            Подать заявку на участие
+          </button>
+        ) : (
+          <div className="space-y-3">
+          <button
+            className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl font-medium text-lg flex items-center justify-center gap-2"
+          >
+            Регистрация закрыта
+          </button>
+        </div>
+        )
       )}
     </div>
   );

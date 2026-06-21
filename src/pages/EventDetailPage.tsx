@@ -33,6 +33,25 @@ export const EventDetailPage: React.FC = () => {
   const [selectedTeam, setSelectedTeam] = useState<Participant | null>(null);
   const [showTeamModal, setShowTeamModal] = useState(false);
 
+  const [isClosingRegistration, setIsClosingRegistration] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const handleCloseRegistration = async () => {
+    if (!id) return;
+    
+    setIsClosingRegistration(true);
+    try {
+      await eventApi.closeRegistration(id);
+      setShowCloseConfirm(false);
+      await loadEvent();
+    } catch (error) {
+      console.error('❌ Ошибка при закрытии набора:', error);
+      alert('❌ Не удалось закрыть набор');
+    } finally {
+      setIsClosingRegistration(false);
+    }
+  };
+
   useEffect(() => {
     if (id) loadEvent();
   }, [id]);
@@ -316,15 +335,48 @@ export const EventDetailPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-6 text-[#8B1E1E] hover:text-[#6B1616] transition-colors font-medium flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Назад
-        </button>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-[#8B1E1E] hover:text-[#6B1616] transition-colors font-medium flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Назад
+          </button>
+
+          {isAuthor && event.eventStatus === 'WILL_BE' && (
+            event.registrationClosed ? (
+              <div className="px-4 py-2 bg-gray-100 text-gray-500 rounded-xl font-medium text-sm flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Набор закрыт
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCloseConfirm(true)}
+                disabled={isClosingRegistration}
+                className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-xl font-medium text-sm flex items-center gap-2 transition-colors disabled:opacity-50 border border-green-200"
+              >
+                {isClosingRegistration ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Закрытие...
+                  </>
+                ) : (
+                  <>
+                    Закрыть набор
+                  </>
+                )}
+              </button>
+            )
+          )}
+        </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <div className="flex items-start gap-4 flex-wrap">
@@ -520,6 +572,7 @@ export const EventDetailPage: React.FC = () => {
               onCancel={() => setShowCancelConfirm(true)}
               onEdit={() => setShowEditModal(true)}
               onDelete={() => setShowDeleteConfirm(true)}
+              registrationClosed={event.registrationClosed}
             />
           </div>
 
@@ -586,6 +639,16 @@ export const EventDetailPage: React.FC = () => {
         eventId={event.id}
         isAuthor={isAuthor}
         onTeamDeleted={loadEvent}
+      />
+
+      <ConfirmModal
+        isOpen={showCloseConfirm}
+        title="Закрытие набора"
+        message="После закрытия набора участники больше не смогут подавать заявки на это мероприятие. Продолжить?"
+        confirmText="Закрыть набор"
+        cancelText="Отмена"
+        onConfirm={handleCloseRegistration}
+        onCancel={() => setShowCloseConfirm(false)}
       />
     </div>
   );
