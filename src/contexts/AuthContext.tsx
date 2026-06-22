@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title="Аккаунт удалён"
         message="Ваш аккаунт был удалён. Доступ к нему больше невозможен."
         confirmText="Понятно"
-        cancelText="Понятно"
+        cancelText="Отмена"
         onConfirm={handleCloseDeletedModal}
         onCancel={handleCloseDeletedModal}
       />
