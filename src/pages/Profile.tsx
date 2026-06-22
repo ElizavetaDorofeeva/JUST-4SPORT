@@ -13,7 +13,7 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 type TabType = 'participant' | 'author';
 
 export const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('participant');
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -182,7 +182,7 @@ export const Profile: React.FC = () => {
     setIsDeleting(true);
     try {
       await userApi.deleteProfile();
-      tokenStorage.clear();
+      await logout();
       setShowDeleteConfirm(false);
       navigate('/login');
     } catch (error) {
