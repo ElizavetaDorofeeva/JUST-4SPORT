@@ -27,7 +27,7 @@ export const userApi = {
     const formData = new FormData();
     formData.append('file', file);
     
-    await api.put('/profile/photo', formData);
+    await api.post('/profile/photo', formData);
   },
 
   deletePhoto: async (): Promise<void> => {

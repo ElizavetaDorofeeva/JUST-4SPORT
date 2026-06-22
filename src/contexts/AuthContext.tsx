@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { authApi } from '../api/auth';
 import { tokenStorage } from '../utils/tokenStorage';
 import { User, AuthTokens, LoginCredentials, RegisterCredentials } from '../types/auth';
+import { userApi } from '../api/user';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 
 interface AuthContextType {
   user: User | null;
@@ -29,6 +31,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeletedModal, setShowDeletedModal] = useState(false);
+
+  const checkDeletedAccount = async () => {
+    try {
+      const profile = await userApi.getProfile();
+      if (profile.nickname === 'deleted-user' || profile.name === 'Удалённый аккаунт') {
+        tokenStorage.removeTokens();
+        setUser(null);
+        setShowDeletedModal(true);
+        return true;
+      }
+    } catch (error) {
+      console.warn('⚠️ Не удалось проверить статус аккаунта');
+    }
+    return false;
+  };
+
+  const handleCloseDeletedModal = () => {
+    setShowDeletedModal(false);
+    window.location.href = '/login';
+  };
 
   useEffect(() => {
     const token = tokenStorage.getAccessToken();
@@ -40,6 +63,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: 'User',
         nickname: 'user'
       });
+      
+      checkDeletedAccount();
     }
     setIsLoading(false);
   }, []);
@@ -59,6 +84,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       name: credentials.email.split('@')[0],
       nickname: credentials.email.split('@')[0]
     });
+
+    await checkDeletedAccount();
   };
 
   const register = async (credentials: RegisterCredentials) => {
@@ -99,6 +126,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }}
     >
       {children}
+
+      <ConfirmModal
+        isOpen={showDeletedModal}
+        title="Аккаунт удалён"
+        message="Ваш аккаунт был удалён. Доступ к нему больше невозможен."
+        confirmText="Понятно"
+        cancelText="Понятно"
+        onConfirm={handleCloseDeletedModal}
+        onCancel={handleCloseDeletedModal}
+      />
     </AuthContext.Provider>
   );
 };

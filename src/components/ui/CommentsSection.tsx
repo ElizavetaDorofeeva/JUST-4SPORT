@@ -18,6 +18,8 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +33,27 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
     } catch (error) {
       console.error('Failed to add comment:', error);
       alert('❌ Ошибка при добавлении комментария');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddReply = async (e: React.FormEvent, parentId: string) => {
+    e.preventDefault();
+    if (!replyContent.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await eventApi.addComment(eventId, { 
+        content: replyContent.trim(),
+        parentId: parentId
+      });
+      setReplyContent('');
+      setReplyingToCommentId(null);
+      onCommentsChanged();
+    } catch (error) {
+      console.error('Failed to add reply:', error);
+      alert(' Ошибка при добавлении ответа');
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +93,25 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
     setEditContent('');
   };
 
-    return (
+  const startReplying = (commentId: string) => {
+    setReplyingToCommentId(commentId);
+    setReplyContent('');
+  };
+
+  const cancelReplying = () => {
+    setReplyingToCommentId(null);
+    setReplyContent('');
+  };
+
+  // Получаем корневые комментарии (без parentId)
+  const rootComments = comments.filter(c => !c.parentId);
+  
+  // Получаем ответы для конкретного комментария
+  const getReplies = (commentId: string) => {
+    return comments.filter(c => c.parentId === commentId);
+  };
+
+  return (
     <div className="bg-white rounded-2xl border border-gray-200 p-6">
       <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
         <svg className="w-5 h-5 text-[#8B1E1E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,85 +143,210 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
       )}
 
       <div className="max-h-[550px] overflow-y-auto pr-2 space-y-4 scrollbar-hide">
-        {comments.length === 0 ? (
+        {rootComments.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
             Пока нет комментариев.
           </p>
         ) : (
-          comments.map(comment => (
-            <div
-              key={comment.id}
-              className={`p-4 rounded-xl border ${
-                comment.authorId === user?.id
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-gray-50 border-gray-200'
-              }`}
-            >
-              {editingCommentId === comment.id ? (
-                <div>
-                  <textarea
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E1E] resize-none mb-2"
-                  />
-                  <div className="flex gap-2">
+          rootComments.map(comment => (
+            <div key={comment.id}>
+              <div
+                className={`p-4 rounded-xl border ${
+                  comment.authorId === user?.id
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                {editingCommentId === comment.id ? (
+                  <div>
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E1E] resize-none mb-2"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditComment(comment.id)}
+                        className="px-3 py-1 bg-[#8B1E1E] text-white rounded-lg hover:bg-[#6B1616] transition-colors text-sm"
+                      >
+                        Сохранить
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-[#8B1E1E] text-white flex items-center justify-center text-sm font-bold">
+                          {comment.authorName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">
+                            {comment.authorName}
+                          </p>
+                          {comment.authorId === user?.id && (
+                            <span className="text-xs text-gray-500">Вы</span>
+                          )}
+                        </div>
+                      </div>
+                      {comment.authorId === user?.id && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => startEditing(comment)}
+                            className="p-1 text-gray-500 hover:text-[#8B1E1E] transition-colors"
+                            title="Редактировать"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+                            title="Удалить"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {comment.content}
+                    </p>
+                    {user && (
+                      <button
+                        onClick={() => startReplying(comment.id)}
+                        className="mt-2 text-xs text-[#8B1E1E] hover:text-[#6B1616] font-medium"
+                      >
+                        Ответить
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {replyingToCommentId === comment.id && (
+                <form onSubmit={(e) => handleAddReply(e, comment.id)} className="ml-8 mt-3 mb-3">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder={`Ответ ${comment.authorName}...`}
+                        rows={2}
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E1E] resize-none text-sm"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2 justify-end">
                     <button
-                      onClick={() => handleEditComment(comment.id)}
-                      className="px-3 py-1 bg-[#8B1E1E] text-white rounded-lg hover:bg-[#6B1616] transition-colors text-sm"
-                    >
-                      Сохранить
-                    </button>
-                    <button
-                      onClick={cancelEditing}
+                      type="button"
+                      onClick={cancelReplying}
                       className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
                     >
                       Отмена
                     </button>
+                    <button
+                      type="submit"
+                      disabled={!replyContent.trim() || isSubmitting}
+                      className="px-3 py-1 bg-[#8B1E1E] text-white rounded-lg hover:bg-[#6B1616] transition-colors disabled:opacity-50 text-sm"
+                    >
+                      {isSubmitting ? 'Отправка...' : 'Ответить'}
+                    </button>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-[#8B1E1E] text-white flex items-center justify-center text-sm font-bold">
-                        {comment.authorName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">
-                          {comment.authorName}
-                        </p>
-                        {comment.authorId === user?.id && (
-                          <span className="text-xs text-gray-500">Вы</span>
-                        )}
-                      </div>
+                </form>
+              )}
+
+              {getReplies(comment.id).length > 0 && (
+                <div className="ml-8 mt-3 space-y-3">
+                  {getReplies(comment.id).map(reply => (
+                    <div
+                      key={reply.id}
+                      className={`p-3 rounded-lg border ${
+                        reply.authorId === user?.id
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      {editingCommentId === reply.id ? (
+                        <div>
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            rows={2}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E1E] resize-none mb-2 text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditComment(reply.id)}
+                              className="px-3 py-1 bg-[#8B1E1E] text-white rounded-lg hover:bg-[#6B1616] transition-colors text-sm"
+                            >
+                              Сохранить
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-[#8B1E1E] text-white flex items-center justify-center text-xs font-bold">
+                                {reply.authorName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900 text-sm">
+                                  {reply.authorName}
+                                </p>
+                                {reply.authorId === user?.id && (
+                                  <span className="text-xs text-gray-500">Вы</span>
+                                )}
+                              </div>
+                            </div>
+                            {reply.authorId === user?.id && (
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => startEditing(reply)}
+                                  className="p-1 text-gray-500 hover:text-[#8B1E1E] transition-colors"
+                                  title="Редактировать"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteComment(reply.id)}
+                                  className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+                                  title="Удалить"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                            {reply.content}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    {comment.authorId === user?.id && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => startEditing(comment)}
-                          className="p-1 text-gray-500 hover:text-[#8B1E1E] transition-colors"
-                          title="Редактировать"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="p-1 text-gray-500 hover:text-red-600 transition-colors"
-                          title="Удалить"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-gray-700 whitespace-pre-wrap">
-                    {comment.content}
-                  </p>
+                  ))}
                 </div>
               )}
             </div>

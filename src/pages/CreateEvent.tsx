@@ -66,6 +66,11 @@ export const CreateEvent: React.FC = () => {
     setIsLoading(true);
 
     try {
+      const formatDateTime = (dateString: string) => {
+        if (!dateString) return '';
+        return dateString.length === 16 ? `${dateString}:00` : dateString;
+      };
+
       const eventDto: EventCreateDto = {
         name: formData.name,
         description: formData.description,
@@ -75,14 +80,14 @@ export const CreateEvent: React.FC = () => {
         eventType: formData.eventType,
         skillLevel: formData.skillLevel,
         teamsNumber: Number(formData.teamsNumber),
-        dateStart: new Date(formData.dateStart).toISOString(),
-        dateEnd: new Date(formData.dateEnd).toISOString(),
-        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null
+        dateStart: formatDateTime(formData.dateStart),
+        dateEnd: formatDateTime(formData.dateEnd),
+        deadline: formData.deadline ? formatDateTime(formData.deadline) : null
       };
 
       await eventApi.createEvent(eventDto, imageFile || undefined);
 
-      navigate('/dashboard');
+      navigate('/');
     } catch (err: any) {
       console.error('Ошибка создания:', err);
       console.error('Ответ сервера:', err.response?.data);
